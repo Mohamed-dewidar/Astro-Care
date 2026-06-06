@@ -1,0 +1,1 @@
+- [SQLite storage pattern](sqlite-storage.md) — expo-sqlite v16 on native; AsyncStorage fallback on web; both via AppContext with Platform.OS guards.

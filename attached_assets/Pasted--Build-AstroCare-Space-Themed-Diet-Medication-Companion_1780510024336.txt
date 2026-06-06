@@ -1,0 +1,616 @@
+
+
+# Build AstroCare – Space-Themed Diet & Medication Companion
+
+Create a production-quality mobile application called **AstroCare**.
+
+AstroCare is a futuristic space-themed health companion designed for people who follow strict dietary schedules and medication routines.
+
+The primary use case is helping users manage multiple meals per day, meal-related medications, reminders, reusable meal plans, and daily diet templates.
+
+The app must feel like a premium futuristic health system running inside a spaceship command center.
+
+
+
+# App Name
+
+AstroCare
+
+Tagline:
+
+"Navigate your health mission."
+
+---
+
+# Design Theme
+
+The application must use a premium futuristic galaxy theme.
+
+Visual inspiration:
+
+* NASA Mission Control
+* Interstellar
+* No Man's Sky
+* Star Citizen
+* Samsung Galaxy wallpapers
+* Space observatories
+* Holographic dashboards
+
+The user should feel like the captain of a health mission.
+
+---
+
+# Color Palette
+
+Background Colors:
+
+* #030712
+* #050816
+* #0B1026
+
+Primary Colors:
+
+* #7C3AED (Nebula Purple)
+* #3B82F6 (Aurora Blue)
+* #22D3EE (Cosmic Cyan)
+
+Status Colors:
+
+* Success: #22C55E
+* Warning: #FB923C
+* Error: #EF4444
+
+Accent:
+
+* #FBBF24 (Star Gold)
+
+---
+
+# UI Requirements
+
+Use:
+
+* Glassmorphism
+* Blur effects
+* Floating cards
+* Rounded corners
+* Neon glows
+* Gradient borders
+* Animated stars
+* Smooth transitions
+* Premium typography
+
+Do NOT create a basic form-based app.
+
+The UI should feel modern and beautiful.
+
+---
+
+# Main Navigation
+
+Bottom navigation should look like a spaceship control panel.
+
+Tabs:
+
+🚀 Mission Control
+
+🪐 Meals
+
+💊 Medications
+
+📅 Galaxy Calendar
+
+⚙️ Command Center
+
+---
+
+# Dashboard (Mission Control)
+
+The dashboard displays today's health mission.
+
+Sections:
+
+### Today's Mission
+
+Shows:
+
+* Upcoming meals
+* Upcoming medications
+* Daily progress
+
+### Next Orbit
+
+Displays:
+
+* Next meal
+* Countdown timer
+
+### Medical Protocols
+
+Displays:
+
+* Upcoming medication reminders
+
+### Mission Progress
+
+Displays:
+
+* Completed meals
+* Completed medications
+* Daily adherence percentage
+
+### Galaxy Timeline
+
+Timeline view of the entire day.
+
+---
+
+# Meal System
+
+Support the following meal categories.
+
+Breakfast Group:
+
+* Pre Breakfast
+* Breakfast
+* Post Breakfast
+
+Lunch Group:
+
+* Pre Lunch
+* Lunch
+* Post Lunch
+
+Dinner Group:
+
+* Pre Dinner
+* Dinner
+* Post Dinner
+
+Snack Group:
+
+* Morning Snack
+* Afternoon Snack
+* Evening Snack
+
+Each meal can contain:
+
+* Name
+* Scheduled time
+* Reminder
+* Notes
+* Image
+* Multiple food items
+* Color tag
+
+Meals should appear as planets on a timeline.
+
+Completed meals:
+
+* Glowing orbit ring
+
+Upcoming meals:
+
+* Pulsing energy ring
+
+Missed meals:
+
+* Red warning state
+
+---
+
+# Food Database
+
+Users can create foods.
+
+Required fields:
+
+* Food Name
+
+Optional fields:
+
+* Food Image
+* Description
+* Calories
+* Protein
+* Carbohydrates
+* Fat
+* Fiber
+* Notes
+* Tags
+
+Users can:
+
+* Add foods
+* Edit foods
+* Delete foods
+* Search foods
+* Favorite foods
+
+Image upload must be supported.
+
+---
+
+# Meal Builder
+
+A meal can contain multiple foods.
+
+Example:
+
+Breakfast
+
+* Oats (100g)
+* Banana (120g)
+* Milk (200ml)
+
+Each food item supports:
+
+* Food Selection
+* Quantity
+* Unit
+
+Supported Units:
+
+* Gram
+* Kg
+* Ml
+* Cup
+* Piece
+* Tablespoon
+* Teaspoon
+
+Quantity is optional.
+
+---
+
+# Meal Templates
+
+Users can save meals.
+
+Example:
+
+Protein Breakfast
+
+Contains:
+
+* Eggs
+* Cheese
+* Toast
+
+Features:
+
+* Save meal template
+* Edit template
+* Duplicate template
+* Delete template
+* Favorite template
+
+Users can reuse saved meals when creating new schedules.
+
+---
+
+# Daily Templates
+
+Users can save an entire day.
+
+Example:
+
+Strict Diet Day
+
+Contains:
+
+* Pre Breakfast
+* Breakfast
+* Post Breakfast
+* Snack
+* Lunch
+* Post Lunch
+* Dinner
+* Medication schedule
+
+Features:
+
+* Save day template
+* Edit template
+* Duplicate template
+* Delete template
+* Apply to any date
+
+---
+
+# Medication System
+
+Users can manage medications.
+
+Required:
+
+* Medication Name
+
+Optional:
+
+* Dosage
+* Quantity
+* Image
+* Notes
+
+Medication can be linked to meals.
+
+Types:
+
+### Before Meal
+
+Examples:
+
+* 15 minutes before breakfast
+* 30 minutes before lunch
+
+### After Meal
+
+Examples:
+
+* 20 minutes after dinner
+* 10 minutes after snack
+
+The system automatically calculates reminder times.
+
+---
+
+# Smart Medication Logic
+
+Critical Feature:
+
+Medication reminders must be dynamic.
+
+Example:
+
+Breakfast scheduled for 8:00 AM.
+
+Medication is set:
+
+20 minutes after breakfast.
+
+User actually marks breakfast complete at 8:17 AM.
+
+Medication reminder automatically shifts to:
+
+8:37 AM.
+
+This feature is required.
+
+---
+
+# Notifications
+
+Use local push notifications.
+
+Reminder Types:
+
+* Meal reminders
+* Medication reminders
+* Missed meal reminders
+* Missed medication reminders
+
+Notification actions:
+
+* Complete
+* Snooze 5 Minutes
+* Snooze 15 Minutes
+* Skip
+
+Notifications should use the AstroCare visual theme.
+
+---
+
+# Calendar (Galaxy Calendar)
+
+Monthly view.
+
+Show:
+
+* Scheduled meals
+* Scheduled medications
+* Completed events
+* Missed events
+
+Users can tap any date to view:
+
+* Meals
+* Foods
+* Medications
+* Notes
+
+---
+
+# History
+
+Track:
+
+* Completed meals
+* Missed meals
+* Completed medications
+* Missed medications
+
+Statistics:
+
+* Daily adherence
+* Weekly adherence
+* Monthly adherence
+* Completion percentage
+
+Charts:
+
+* Meal consistency
+* Medication consistency
+
+---
+
+# Search
+
+Global search should search:
+
+* Foods
+* Meals
+* Templates
+* Medications
+
+Search must be fast and responsive.
+
+---
+
+# Floating Action Button
+
+A floating futuristic holographic button.
+
+Quick actions:
+
+* Add Food
+* Add Meal
+* Add Medication
+* Add Day Template
+
+---
+
+# Onboarding
+
+Screen 1
+
+Title:
+
+Welcome aboard, Captain.
+
+Subtitle:
+
+Your health mission starts here.
+
+Screen 2
+
+Title:
+
+Build your nutrition galaxy.
+
+Subtitle:
+
+Create meals, foods, and daily plans.
+
+Screen 3
+
+Title:
+
+Never miss a protocol.
+
+Subtitle:
+
+Receive intelligent meal and medication reminders.
+
+Screen 4
+
+Title:
+
+Navigate toward better health.
+
+Subtitle:
+
+Stay on track every day.
+
+---
+
+# Gamification
+
+Users earn stars.
+
+Achievements:
+
+* First Mission
+* 7-Day Orbit Streak
+* Perfect Mission Day
+* Nutrition Commander
+* Medication Master
+* Galaxy Explorer
+
+Achievement badges should fit the space theme.
+
+---
+
+# Data Models
+
+Food
+
+{
+id: string;
+name: string;
+image?: string;
+description?: string;
+calories?: number;
+protein?: number;
+carbs?: number;
+fat?: number;
+fiber?: number;
+notes?: string;
+tags?: string[];
+}
+
+MealItem
+
+{
+id: string;
+foodId: string;
+quantity?: number;
+unit?: string;
+}
+
+Meal
+
+{
+id: string;
+name: string;
+category: string;
+time: string;
+reminderEnabled: boolean;
+image?: string;
+notes?: string;
+items: MealItem[];
+}
+
+Medication
+
+{
+id: string;
+name: string;
+dosage?: string;
+quantity?: string;
+image?: string;
+notes?: string;
+relationType: "before" | "after";
+mealId: string;
+minutesOffset: number;
+}
+
+DayTemplate
+
+{
+id: string;
+name: string;
+meals: Meal[];
+medications: Medication[];
+}
+
+---
+
+# Deliverables
+
+Generate:
+
+* Full React Native Expo application
+* Beautiful space-themed UI
+* Working navigation
+* SQLite database layer
+* Notification system
+* Local storage
+* Reusable components
+* TypeScript types
+* Zustand stores
+* Sample seed data
+* Responsive layouts
+* Smooth animations
+
+The final product should look like a premium App Store / Google Play health application with a futuristic galaxy aesthetic, not a simple CRUD diet tracker.
