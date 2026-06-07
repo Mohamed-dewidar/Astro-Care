@@ -88,7 +88,6 @@ export default function MissionControlScreen() {
             <Text style={styles.streakText}>{currentStreak}</Text>
           </GlassCard>
         </View>
-
         <GlassCard style={styles.progressCard} glowColor="#7C3AED">
           <View style={styles.progressRow}>
             <ProgressRing
@@ -163,7 +162,6 @@ export default function MissionControlScreen() {
             </View>
           </View>
         </GlassCard>
-
         {nextMeal && (
           <GlassCard style={styles.nextOrbitCard} glowColor="#FBBF24">
             <LinearGradient
@@ -192,7 +190,6 @@ export default function MissionControlScreen() {
             </View>
           </GlassCard>
         )}
-
         {upcoming.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -210,7 +207,6 @@ export default function MissionControlScreen() {
             ))}
           </View>
         )}
-
         {upcomingMeds.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -233,60 +229,69 @@ export default function MissionControlScreen() {
             })}
           </View>
         )}
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="time" size={16} color="#3B82F6" />
-            <Text style={styles.sectionTitle}>Galaxy Timeline</Text>
-          </View>
-          <GlassCard style={styles.timeline}>
-            {[...todayMeals]
-              .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime))
-              .map((meal, i) => (
-                <View key={meal.id} style={styles.timelineItem}>
-                  <View style={styles.timelineTime}>
-                    <Text style={styles.timelineTimeText}>
-                      {formatTime(meal.scheduledTime)}
-                    </Text>
-                  </View>
-                  <View style={styles.timelineLine}>
-                    <View
+        {todayMeals.length > 0 ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="time" size={16} color="#3B82F6" />
+              <Text style={styles.sectionTitle}>Galaxy Timeline</Text>
+            </View>
+            <GlassCard style={styles.timeline}>
+              {[...todayMeals]
+                .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime))
+                .map((meal, i) => (
+                  <View key={meal.id} style={styles.timelineItem}>
+                    <View style={styles.timelineTime}>
+                      <Text style={styles.timelineTimeText}>
+                        {formatTime(meal.scheduledTime)}
+                      </Text>
+                    </View>
+                    <View style={styles.timelineLine}>
+                      <View
+                        style={[
+                          styles.timelineDot,
+                          {
+                            backgroundColor: meal.completedAt
+                              ? "#22C55E"
+                              : meal.skipped
+                                ? "#475569"
+                                : isTimePast(meal.scheduledTime)
+                                  ? "#EF4444"
+                                  : "#7C3AED",
+                          },
+                        ]}
+                      />
+                      {i < todayMeals.length - 1 && (
+                        <View style={styles.timelineConnector} />
+                      )}
+                    </View>
+                    <Text
                       style={[
-                        styles.timelineDot,
+                        styles.timelineName,
                         {
-                          backgroundColor: meal.completedAt
+                          color: meal.completedAt
                             ? "#22C55E"
                             : meal.skipped
                               ? "#475569"
-                              : isTimePast(meal.scheduledTime)
-                                ? "#EF4444"
-                                : "#7C3AED",
+                              : "#F8FAFC",
                         },
                       ]}
-                    />
-                    {i < todayMeals.length - 1 && (
-                      <View style={styles.timelineConnector} />
-                    )}
+                      numberOfLines={1}
+                    >
+                      {meal.name}
+                    </Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.timelineName,
-                      {
-                        color: meal.completedAt
-                          ? "#22C55E"
-                          : meal.skipped
-                            ? "#475569"
-                            : "#F8FAFC",
-                      },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {meal.name}
-                  </Text>
-                </View>
-              ))}
-          </GlassCard>
-        </View>
+                ))}
+            </GlassCard>
+          </View>
+        ) : (
+          <View style={styles.empty}>
+            <Ionicons name="planet-outline" size={48} color="#475569" />
+            <Text style={styles.emptyTitle}>No missions today</Text>
+            <Text style={styles.emptyText}>
+              Add meals to start your health mission
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -319,6 +324,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     marginBottom: 12,
+  },
+  empty: { alignItems: "center", paddingVertical: 60, gap: 12 },
+  emptyTitle: { color: "#94A3B8", fontSize: 18, fontWeight: "600" },
+  emptyText: {
+    color: "#475569",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
   },
   statRow: {
     flexDirection: "row",

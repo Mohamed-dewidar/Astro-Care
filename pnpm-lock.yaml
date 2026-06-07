@@ -10,7 +10,7 @@ catalogs:
       specifier: ^5.90.21
       version: 5.101.0
     '@types/node':
-      specifier: ^25.3.3
+      specifier: 25.9.1
       version: 25.9.1
     drizzle-orm:
       specifier: ^0.45.2
@@ -170,6 +170,9 @@ importers:
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.101.0(react@19.1.0)
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.1
       '@types/react':
         specifier: ~19.1.10
         version: 19.1.17
