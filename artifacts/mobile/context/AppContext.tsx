@@ -344,6 +344,7 @@ interface AppContextType {
     medsTotal: number;
     adherence: number;
   };
+  loaded: boolean;
   currentStreak: number;
 }
 
@@ -463,6 +464,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (ach) setAchievements(JSON.parse(ach));
           else setAchievements([]);
           if (ob === "true") setOnboardingComplete(true);
+          console.log("onboardingComplete", ob === "true", onboardingComplete);
         }
       } catch (_) {
       } finally {
@@ -773,7 +775,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           computedTime,
         };
       });
-    if (USE_SQLITE) {
+      if (USE_SQLITE) {
         newMeals.forEach((m) => dbInsertMeal(m));
         newMeds.forEach((m) => dbInsertMedication(m));
       }
@@ -822,6 +824,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         applyDayTemplate,
         achievements,
         todayStats,
+        loaded,
         currentStreak,
       }}
     >

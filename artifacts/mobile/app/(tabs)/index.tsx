@@ -24,6 +24,7 @@ export default function MissionControlScreen() {
   const insets = useSafeAreaInsets();
   const {
     onboardingComplete,
+    loaded,
     todayMeals,
     medications,
     foods,
@@ -35,6 +36,10 @@ export default function MissionControlScreen() {
     skipMedication,
   } = useApp();
   const today = getTodayString();
+
+  if (!loaded) {
+    return null;
+  }
 
   if (!onboardingComplete) {
     return <Redirect href="/onboarding" />;
