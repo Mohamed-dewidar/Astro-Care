@@ -464,7 +464,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (ach) setAchievements(JSON.parse(ach));
           else setAchievements([]);
           if (ob === "true") setOnboardingComplete(true);
-          console.log("onboardingComplete", ob === "true", onboardingComplete);
         }
       } catch (_) {
       } finally {
@@ -545,6 +544,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteFood = useCallback((id: string) => {
     if (USE_SQLITE) dbDeleteFood(id);
     setFoods((prev) => prev.filter((f) => f.id !== id));
+
+    setMealTemplates((prev) => {
+      const nextTemplates: MealTemplate[] = [];
+      prev.forEach((meal) => {
+        if (!meal.items.some((item) => item.foodId === id)) {
+          nextTemplates.push(meal);
+          return;
+        }
+
+        const updatedItems = meal.items.filter((item) => item.foodId !== id);
+
+        if (!updatedItems.length) {
+          if (USE_SQLITE) dbDeleteMealTemplate(meal.id);
+          return;
+        }
+
+        const updatedMeal = { ...meal, items: updatedItems };
+        if (USE_SQLITE) dbInsertMealTemplate(updatedMeal);
+        nextTemplates.push(updatedMeal);
+      });
+      return nextTemplates;
+    });
   }, []);
 
   const toggleFavoriteFood = useCallback((id: string) => {
