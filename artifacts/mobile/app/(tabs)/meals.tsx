@@ -243,7 +243,6 @@ export default function MealsScreen() {
   // Edit template
 
   const openEdit = (t: MealTemplate) => {
-    console.log("Editing template", t);
     setEditingTemplate(t);
     setEditName(t.name);
     setEditCategory(t.category);
