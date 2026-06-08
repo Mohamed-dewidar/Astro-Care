@@ -49,7 +49,7 @@ export default function SettingsScreen() {
     currentStreak,
     foods,
     todayMeals,
-    medications,
+    todaysMedication,
   } = useApp();
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
   const topPad = Platform.OS === "web" ? 80 : insets.top;
@@ -195,7 +195,7 @@ export default function SettingsScreen() {
             },
             {
               label: "Meds Today",
-              value: medications.length,
+              value: todaysMedication.length,
               icon: "medical" as const,
               color: "#7C3AED",
             },

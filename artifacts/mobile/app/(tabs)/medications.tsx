@@ -23,17 +23,22 @@ import { MedicationCard } from "@/components/MedicationCard";
 import { SpaceBackground } from "@/components/SpaceBackground";
 import { useApp } from "@/context/AppContext";
 import { getTodayString } from "@/utils/dateUtils";
-import { MealCategory, MEAL_CATEGORY_LABELS } from "@/types";
+import {
+  MealCategory,
+  MEAL_CATEGORY_LABELS,
+  Medication,
+  MedicationTemplate,
+} from "@/types";
 
 export default function MedicationsScreen() {
   const insets = useSafeAreaInsets();
   const {
-    medications,
+    medicationTemplates,
     todayMeals,
     todayStats,
-    completeMedication,
-    skipMedication,
-    addMedication,
+    addMedicationTemplate,
+    updateMedicationTemplate,
+    deleteMedicationTemplate,
   } = useApp();
   const fabRef = useRef<FABHandle>(null);
   const [addModal, setAddModal] = useState(false);
@@ -41,34 +46,74 @@ export default function MedicationsScreen() {
   const [medDosage, setMedDosage] = useState("");
   const [medRelation, setMedRelation] = useState<"before" | "after">("after");
   const [medOffset, setMedOffset] = useState("30");
-  const [selectedCategory, setSelectedCategory] = useState<MealCategory | undefined>();
-  const CATEGORY_OPTIONS = Object.entries(MEAL_CATEGORY_LABELS) as [MealCategory, string][];
+  const [selectedCategory, setSelectedCategory] = useState<
+    MealCategory | undefined
+  >();
+  const [editingMedication, setEditingMedication] =
+    useState<MedicationTemplate | null>(null);
+  const CATEGORY_OPTIONS = Object.entries(MEAL_CATEGORY_LABELS) as [
+    MealCategory,
+    string,
+  ][];
+
+  const resetForm = () => {
+    setMedName("");
+    setMedDosage("");
+    setMedRelation("after");
+    setMedOffset("30");
+    setSelectedCategory(undefined);
+    setEditingMedication(null);
+  };
+
+  const openAddModal = () => {
+    resetForm();
+    setAddModal(true);
+  };
 
   const closeModal = () => {
+    resetForm();
     setAddModal(false);
     fabRef.current?.close();
   };
 
-  const completed = medications.filter((m) => m.completedAt);
-  const pending = medications.filter((m) => !m.completedAt && !m.skipped);
-  const skipped = medications.filter((m) => m.skipped);
+  const openEditMedication = (med: MedicationTemplate) => {
+    setEditingMedication(med);
+    setMedName(med.name);
+    setMedDosage(med.dosage ?? "");
+    setMedRelation(med.relationType);
+    setMedOffset(String(med.minutesOffset ?? 30));
+    setSelectedCategory(med.linkToCategory);
+    setAddModal(true);
+  };
 
-  const handleAdd = () => {
-    if (!medName.trim() || !selectedCategory) return;
-    addMedication({
+  const handleSave = () => {
+    if (!medName.trim() || !selectedCategory || !editingMedication) return;
+
+    updateMedicationTemplate(editingMedication.id, {
       name: medName.trim(),
       dosage: medDosage.trim() || undefined,
       relationType: medRelation,
       linkToCategory: selectedCategory,
       minutesOffset: Number(medOffset) || 30,
-      date: getTodayString(),
     });
-    setMedName("");
-    setMedDosage("");
-    setSelectedCategory(undefined);
     closeModal();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
+
+  const handleAdd = () => {
+    if (!medName.trim() || !selectedCategory) return;
+    addMedicationTemplate({
+      name: medName.trim(),
+      dosage: medDosage.trim() || undefined,
+      relationType: medRelation,
+      linkToCategory: selectedCategory,
+      minutesOffset: Number(medOffset) || 30,
+    });
+    closeModal();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const templates = medicationTemplates;
 
   const topPad = Platform.OS === "web" ? 80 : insets.top;
   const adherence =
@@ -105,108 +150,54 @@ export default function MedicationsScreen() {
               <Text style={styles.statLabel}>Taken</Text>
             </View>
             <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{pending.length}</Text>
-              <Text style={styles.statLabel}>Pending</Text>
-            </View>
+
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: "#22C55E" }]}>
-                {adherence}%
+                {medicationTemplates.length}
               </Text>
-              <Text style={styles.statLabel}>Adherence</Text>
+              <Text style={styles.statLabel}>Medication Count</Text>
             </View>
           </View>
         </GlassCard>
 
-        {pending.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View
-                style={[styles.sectionDot, { backgroundColor: "#7C3AED" }]}
-              />
-              <Text style={styles.sectionTitle}>Pending</Text>
-            </View>
-            {pending.map((med) => {
-              const linked = todayMeals.find((m) => m.category === med.linkToCategory);
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionDot, { backgroundColor: "#7C3AED" }]} />
+            <Text style={styles.sectionTitle}>Medication Templates</Text>
+          </View>
+          {templates.length > 0 ? (
+            templates.map((template) => {
+              const linked = todayMeals.find(
+                (m) => m.category === template.linkToCategory,
+              );
+              const medicationForCard: Medication = {
+                ...template,
+                id: template.id,
+                templateId: template.id,
+                date: getTodayString(),
+              };
               return (
                 <MedicationCard
-                  key={med.id}
-                  medication={med}
+                  key={template.id}
+                  medication={medicationForCard}
                   linkedMeal={linked}
-                  onComplete={() => completeMedication(med.id)}
-                  onSkip={() => skipMedication(med.id)}
+                  onEdit={() => openEditMedication(template)}
+                  onDelete={() => deleteMedicationTemplate(template.id)}
                 />
               );
-            })}
-          </View>
-        )}
-
-        {completed.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View
-                style={[styles.sectionDot, { backgroundColor: "#22C55E" }]}
-              />
-              <Text style={styles.sectionTitle}>Completed</Text>
+            })
+          ) : (
+            <View style={styles.empty}>
+              <Ionicons name="medical-outline" size={56} color="#475569" />
+              <Text style={styles.emptyTitle}>No medication templates</Text>
+              <Text style={styles.emptyText}>
+                Add medications here and they will appear on your home daily
+                plan.
+              </Text>
             </View>
-            {completed.map((med) => {
-              const linked = todayMeals.find((m) => m.category === med.linkToCategory);
-              return (
-                <MedicationCard
-                  key={med.id}
-                  medication={med}
-                  linkedMeal={linked}
-                  onComplete={() => completeMedication(med.id)}
-                  onSkip={() => skipMedication(med.id)}
-                />
-              );
-            })}
-          </View>
-        )}
-
-        {skipped.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View
-                style={[styles.sectionDot, { backgroundColor: "#475569" }]}
-              />
-              <Text style={styles.sectionTitle}>Skipped</Text>
-            </View>
-            {skipped.map((med) => {
-              const linked = todayMeals.find((m) => m.category === med.linkToCategory);
-              return (
-                <MedicationCard
-                  key={med.id}
-                  medication={med}
-                  linkedMeal={linked}
-                  onComplete={() => completeMedication(med.id)}
-                  onSkip={() => skipMedication(med.id)}
-                />
-              );
-            })}
-          </View>
-        )}
-
-        {medications.length === 0 && (
-          <View style={styles.empty}>
-            <Ionicons name="medical-outline" size={56} color="#475569" />
-            <Text style={styles.emptyTitle}>No medications</Text>
-            <Text style={styles.emptyText}>
-              Add medications linked to your meals
-            </Text>
-          </View>
-        )}
-
-        <GlassCard style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Ionicons name="bulb" size={20} color="#FBBF24" />
-            <Text style={styles.infoText}>
-              When you mark a meal complete, linked medication reminders
-              automatically shift to your actual completion time.
-            </Text>
-          </View>
-        </GlassCard>
+          )}
+        </View>
       </ScrollView>
 
       <FloatingActionButton
@@ -214,9 +205,9 @@ export default function MedicationsScreen() {
         actions={[
           {
             icon: "medical",
-            label: "Add Medication",
+            label: "Add Medication Template",
             color: "#22D3EE",
-            onPress: () => setAddModal(true),
+            onPress: openAddModal,
           },
         ]}
       />
@@ -233,7 +224,11 @@ export default function MedicationsScreen() {
               style={[styles.modal, { paddingBottom: insets.bottom + 16 }]}
             >
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>New Medication</Text>
+                <Text style={styles.modalTitle}>
+                  {editingMedication
+                    ? "Edit Medication Template"
+                    : "New Medication Template"}
+                </Text>
                 <Pressable
                   onPress={closeModal}
                   style={styles.closeBtn}
@@ -307,7 +302,8 @@ export default function MedicationsScreen() {
                     <Text
                       style={[
                         styles.mealChipText,
-                        selectedCategory === category && styles.mealChipTextActive,
+                        selectedCategory === category &&
+                          styles.mealChipTextActive,
                       ]}
                     >
                       {label}
@@ -316,14 +312,19 @@ export default function MedicationsScreen() {
                 ))}
               </ScrollView>
 
-              <Pressable style={styles.btn} onPress={handleAdd}>
+              <Pressable
+                style={styles.btn}
+                onPress={editingMedication ? handleSave : handleAdd}
+              >
                 <LinearGradient
                   colors={["#22D3EE", "#3B82F6"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.btnGradient}
                 >
-                  <Text style={styles.btnText}>Add Medication</Text>
+                  <Text style={styles.btnText}>
+                    {editingMedication ? "Save Template" : "Add Template"}
+                  </Text>
                 </LinearGradient>
               </Pressable>
             </GlassCard>

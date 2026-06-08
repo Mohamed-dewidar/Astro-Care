@@ -26,7 +26,7 @@ export default function MissionControlScreen() {
     onboardingComplete,
     loaded,
     todayMeals,
-    medications,
+    todaysMedication,
     foods,
     todayStats,
     currentStreak,
@@ -62,8 +62,8 @@ export default function MissionControlScreen() {
   const nextMeal = upcoming[0];
 
   const upcomingMeds = useMemo(() => {
-    return medications.filter((m) => !m.completedAt && !m.skipped).slice(0, 3);
-  }, [medications]);
+    return todaysMedication;
+  }, [todaysMedication]);
 
   const topPad = Platform.OS === "web" ? 80 : insets.top;
 

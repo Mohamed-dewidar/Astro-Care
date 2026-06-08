@@ -10,8 +10,10 @@ import { formatTime } from "@/utils/dateUtils";
 interface MedicationCardProps {
   medication: Medication;
   linkedMeal?: ScheduledMeal;
-  onComplete: () => void;
-  onSkip: () => void;
+  onComplete?: () => void;
+  onSkip?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export function MedicationCard({
@@ -19,6 +21,8 @@ export function MedicationCard({
   linkedMeal,
   onComplete,
   onSkip,
+  onEdit,
+  onDelete,
 }: MedicationCardProps) {
   const isCompleted = !!medication.completedAt;
   const isSkipped = !!medication.skipped;
@@ -61,11 +65,9 @@ export function MedicationCard({
               <Ionicons name="link" size={11} color="#94A3B8" />
               <Text style={styles.mealLinkText}>
                 {medication.relationType === "before"
-                  ? `${medication.minutesOffset}min before`
-                  : `${medication.minutesOffset}min after`} 
-                {linkedMeal
-                  ? linkedMeal.name
-                  : MEAL_CATEGORY_LABELS[medication.linkToCategory]}
+                  ? `${medication.minutesOffset}min before `
+                  : `${medication.minutesOffset}min after `}
+                {MEAL_CATEGORY_LABELS[medication.linkToCategory]}
               </Text>
             </View>
           )}
@@ -84,44 +86,77 @@ export function MedicationCard({
         </View>
       </View>
 
-      {!isCompleted && !isSkipped && (
+      {(onEdit || onDelete) && (
+        <View style={styles.editActions}>
+          {onEdit && (
+            <Pressable
+              style={[styles.smallBtn, styles.editBtn]}
+              onPress={onEdit}
+            >
+              <Ionicons name="create" size={16} color="#22D3EE" />
+              <Text style={[styles.smallBtnText, { color: "#22D3EE" }]}>
+                Edit
+              </Text>
+            </Pressable>
+          )}
+          {onDelete && (
+            <Pressable
+              style={[styles.smallBtn, styles.deleteBtn]}
+              onPress={onDelete}
+            >
+              <Ionicons name="trash" size={16} color="#F87171" />
+              <Text style={[styles.smallBtnText, { color: "#F87171" }]}>
+                Delete
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+
+      {!isCompleted && !isSkipped && (onComplete || onSkip) && (
         <View style={styles.actions}>
-          <Pressable
-            style={[
-              styles.actionBtn,
-              {
-                backgroundColor: "rgba(124,58,237,0.15)",
-                borderColor: "rgba(124,58,237,0.3)",
-              },
-            ]}
-            onPress={() => {
-              Haptics.notificationAsync(
-                Haptics.NotificationFeedbackType.Success,
-              );
-              onComplete();
-            }}
-          >
-            <Ionicons name="checkmark-circle" size={16} color="#7C3AED" />
-            <Text style={[styles.actionText, { color: "#7C3AED" }]}>
-              Mark Taken
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.actionBtn,
-              {
-                backgroundColor: "rgba(148,163,184,0.08)",
-                borderColor: "rgba(148,163,184,0.15)",
-              },
-            ]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onSkip();
-            }}
-          >
-            <Ionicons name="remove-circle" size={16} color="#64748B" />
-            <Text style={[styles.actionText, { color: "#64748B" }]}>Skip</Text>
-          </Pressable>
+          {onComplete && (
+            <Pressable
+              style={[
+                styles.actionBtn,
+                {
+                  backgroundColor: "rgba(124,58,237,0.15)",
+                  borderColor: "rgba(124,58,237,0.3)",
+                },
+              ]}
+              onPress={() => {
+                Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Success,
+                );
+                onComplete();
+              }}
+            >
+              <Ionicons name="checkmark-circle" size={16} color="#7C3AED" />
+              <Text style={[styles.actionText, { color: "#7C3AED" }]}>
+                Mark Taken
+              </Text>
+            </Pressable>
+          )}
+          {onSkip && (
+            <Pressable
+              style={[
+                styles.actionBtn,
+                {
+                  backgroundColor: "rgba(148,163,184,0.08)",
+                  borderColor: "rgba(148,163,184,0.15)",
+                },
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onSkip();
+              }}
+            >
+              <Ionicons name="remove-circle" size={16} color="#64748B" />
+              <Text style={[styles.actionText, { color: "#64748B" }]}>
+                Skip
+              </Text>
+            </Pressable>
+          )}
         </View>
       )}
     </GlassCard>
@@ -152,6 +187,29 @@ const styles = StyleSheet.create({
   timeContainer: { alignItems: "flex-end" },
   time: { color: "#F8FAFC", fontSize: 14, fontWeight: "600" },
   status: { fontSize: 11, marginTop: 2, fontWeight: "500" },
+  editActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+  smallBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  editBtn: {
+    borderColor: "rgba(34,211,238,0.3)",
+    backgroundColor: "rgba(34,211,238,0.08)",
+  },
+  deleteBtn: {
+    borderColor: "rgba(248,113,113,0.3)",
+    backgroundColor: "rgba(248,113,113,0.08)",
+  },
+  smallBtnText: { fontSize: 13, fontWeight: "600" },
   actions: { flexDirection: "row", gap: 8, marginTop: 12 },
   actionBtn: {
     flex: 1,

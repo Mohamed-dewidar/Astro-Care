@@ -103,6 +103,7 @@ export interface ScheduledMeal {
 
 export interface Medication {
   id: string;
+  templateId?: string;
   name: string;
   linkToCategory: MealCategory;
   relationType: "before" | "after";
@@ -115,6 +116,18 @@ export interface Medication {
   completedAt?: string;
   skipped?: boolean;
   date: string;
+}
+
+export interface MedicationTemplate {
+  id: string;
+  name: string;
+  linkToCategory: MealCategory;
+  relationType: "before" | "after";
+  dosage?: string;
+  quantity?: string;
+  image?: string;
+  notes?: string;
+  minutesOffset: number;
 }
 
 export interface MealTemplate {

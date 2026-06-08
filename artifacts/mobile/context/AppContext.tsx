@@ -35,6 +35,7 @@ import type {
   Food,
   MealTemplate,
   Medication,
+  MedicationTemplate,
   ScheduledMeal,
 } from "@/types";
 import { computeMedicationTime, getTodayString, uid } from "@/utils/dateUtils";
@@ -299,6 +300,33 @@ function buildTodayMeds(meals: ScheduledMeal[]): Medication[] {
   return result;
 }
 
+function buildTodayMedsFromTemplates(
+  meals: ScheduledMeal[],
+  templates: MedicationTemplate[],
+  date: string,
+): Medication[] {
+  return templates.map((template) => {
+    const linkedMeal = meals.find(
+      (meal) => meal.category === template.linkToCategory,
+    );
+    return {
+      ...template,
+      id: uid(),
+      templateId: template.id,
+      computedTime: linkedMeal
+        ? computeMedicationTime(
+            linkedMeal.scheduledTime,
+            template.relationType,
+            template.minutesOffset,
+          )
+        : undefined,
+      completedAt: undefined,
+      skipped: false,
+      date,
+    };
+  });
+}
+
 // ─── Context type ──────────────────────────────────────────────────────────
 
 interface AppContextType {
@@ -320,7 +348,15 @@ interface AppContextType {
   skipMeal: (id: string) => void;
 
   medications: Medication[];
-  addMedication: (med: Omit<Medication, "id">) => void;
+  todaysMedication: Medication[];
+  medicationTemplates: MedicationTemplate[];
+  addMedicationTemplate: (med: Omit<MedicationTemplate, "id">) => void;
+  updateMedicationTemplate: (
+    id: string,
+    med: Partial<MedicationTemplate>,
+  ) => void;
+  deleteMedicationTemplate: (id: string) => void;
+  addMedication: (med: Omit<MedicationTemplate, "id">) => void;
   updateMedication: (id: string, med: Partial<Medication>) => void;
   deleteMedication: (id: string) => void;
   completeMedication: (id: string) => void;
@@ -367,6 +403,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [foods, setFoods] = useState<Food[]>([]);
   const [allMeals, setAllMeals] = useState<ScheduledMeal[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
+  const [medicationTemplates, setMedicationTemplates] = useState<
+    MedicationTemplate[]
+  >([]);
   const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([]);
   const [dayTemplates, setDayTemplates] = useState<DayTemplate[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -420,6 +459,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           // Templates
           setMealTemplates(dbGetMealTemplates());
           setDayTemplates(dbGetDayTemplates());
+          const rawMedicationTemplates = await AsyncStorage.getItem(
+            "medicationTemplates",
+          );
+          if (rawMedicationTemplates) {
+            setMedicationTemplates(JSON.parse(rawMedicationTemplates));
+          } else {
+            setMedicationTemplates([]);
+          }
 
           // Achievements
           const dbAch = dbGetAchievements();
@@ -448,15 +495,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const parsedFoods: Food[] = f ? JSON.parse(f) : [];
           setFoods(parsedFoods);
 
-          if (m) {
-            const parsed: ScheduledMeal[] = JSON.parse(m);
-            setAllMeals(parsed);
-          } else {
-            setAllMeals([]);
-          }
+          const loadedMeals: ScheduledMeal[] = m ? JSON.parse(m) : [];
+          setAllMeals(loadedMeals);
 
-          if (med) setMedications(JSON.parse(med));
-          else setMedications([]);
+          const rawTemplates = await AsyncStorage.getItem(
+            "medicationTemplates",
+          );
+          const parsedTemplates: MedicationTemplate[] = rawTemplates
+            ? JSON.parse(rawTemplates)
+            : [];
+          setMedicationTemplates(parsedTemplates);
+
+          let loadedMeds: Medication[] = med ? JSON.parse(med) : [];
+          const hasTodayMed = loadedMeds.some((item) => item.date === today);
+          if (!hasTodayMed) {
+            const seeded = buildTodayMedsFromTemplates(
+              loadedMeals,
+              parsedTemplates,
+              today,
+            );
+
+            loadedMeds = [...loadedMeds, ...seeded];
+          }
+          setMedications(loadedMeds);
+
           if (mt) setMealTemplates(JSON.parse(mt));
           else setMealTemplates([]);
           if (dt) setDayTemplates(JSON.parse(dt));
@@ -490,6 +552,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loaded || USE_SQLITE) return;
+    persistAsyncArray("medicationTemplates", medicationTemplates);
+  }, [medicationTemplates, loaded]);
+
+  useEffect(() => {
+    if (!loaded || USE_SQLITE) return;
     persistAsyncArray("mealTemplates", mealTemplates);
     persistAsyncArray("dayTemplates", dayTemplates);
     persistAsyncArray("achievements", achievements);
@@ -498,11 +565,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Derived ───────────────────────────────────────────────────────────────
   const today = getTodayString();
   const todayMeals = allMeals.filter((m) => m.date === today);
-  const todayMeds = medications.filter((m) => m.date === today);
+  const todaysMedication = medications.filter((m) => m.date === today);
 
   const mealsCompleted = todayMeals.filter((m) => m.completedAt).length;
-  const medsCompleted = todayMeds.filter((m) => m.completedAt).length;
-  const totalEvents = todayMeals.length + todayMeds.length;
+  const medsCompleted = todaysMedication.filter((m) => m.completedAt).length;
+  const totalEvents = todayMeals.length + todaysMedication.length;
   const adherence =
     totalEvents > 0
       ? Math.round(((mealsCompleted + medsCompleted) / totalEvents) * 100)
@@ -512,7 +579,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     mealsCompleted,
     mealsTotal: todayMeals.length,
     medsCompleted,
-    medsTotal: todayMeds.length,
+    medsTotal: todaysMedication.length,
     adherence,
   };
 
@@ -607,49 +674,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAllMeals((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
-  const completeMeal = useCallback((id: string) => {
-    const completedAt = new Date().toISOString();
-    const completedMeal = allMeals.find((m) => m.id === id);
-    setAllMeals((prev) => {
-      const updated = prev.map((m) =>
-        m.id === id ? { ...m, completedAt, skipped: false } : m,
-      );
-      if (USE_SQLITE) {
-        const meal = updated.find((m) => m.id === id);
-        if (meal) dbInsertMeal(meal);
-      }
-      return updated;
-    });
-    if (!completedMeal) return;
-    setMedications((prev) => {
-      const now = new Date(completedAt);
-      const actualTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      const updated = prev.map((med) => {
-        if (med.linkToCategory !== completedMeal.category) return med;
-        const newTime = computeMedicationTime(
-          actualTime,
-          med.relationType,
-          med.minutesOffset,
+  const completeMeal = useCallback(
+    (id: string) => {
+      const completedAt = new Date().toISOString();
+      const completedMeal = allMeals.find((m) => m.id === id);
+      setAllMeals((prev) => {
+        const updated = prev.map((m) =>
+          m.id === id ? { ...m, completedAt, skipped: false } : m,
         );
-        const next = { ...med, computedTime: newTime };
-        if (USE_SQLITE) dbInsertMedication(next);
-        return next;
+        if (USE_SQLITE) {
+          const meal = updated.find((m) => m.id === id);
+          if (meal) dbInsertMeal(meal);
+        }
+        return updated;
       });
-      return updated;
-    });
-    setAchievements((prev) => {
-      const updated = prev.map((a) =>
-        a.id === "first-mission" && !a.unlocked
-          ? { ...a, unlocked: true, unlockedAt: new Date().toISOString() }
-          : a,
-      );
-      if (USE_SQLITE) {
-        const ach = updated.find((a) => a.id === "first-mission");
-        if (ach) dbUpsertAchievement(ach);
-      }
-      return updated;
-    });
-  }, [allMeals]);
+      if (!completedMeal) return;
+      setMedications((prev) => {
+        const now = new Date(completedAt);
+        const actualTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+        const updated = prev.map((med) => {
+          if (med.linkToCategory !== completedMeal.category) return med;
+          const newTime = computeMedicationTime(
+            actualTime,
+            med.relationType,
+            med.minutesOffset,
+          );
+          const next = { ...med, computedTime: newTime };
+          if (USE_SQLITE) dbInsertMedication(next);
+          return next;
+        });
+        return updated;
+      });
+      setAchievements((prev) => {
+        const updated = prev.map((a) =>
+          a.id === "first-mission" && !a.unlocked
+            ? { ...a, unlocked: true, unlockedAt: new Date().toISOString() }
+            : a,
+        );
+        if (USE_SQLITE) {
+          const ach = updated.find((a) => a.id === "first-mission");
+          if (ach) dbUpsertAchievement(ach);
+        }
+        return updated;
+      });
+    },
+    [allMeals],
+  );
 
   const skipMeal = useCallback((id: string) => {
     setAllMeals((prev) => {
@@ -665,9 +735,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ── Medications ───────────────────────────────────────────────────────────
-  const addMedication = useCallback(
-    (med: Omit<Medication, "id">) => {
-      const linkedMeal = allMeals.find((m) => m.category === med.linkToCategory);
+  const addMedicationTemplate = useCallback(
+    (med: Omit<MedicationTemplate, "id">) => {
+      const newTemplate: MedicationTemplate = { ...med, id: uid() };
+      setMedicationTemplates((prev) => [...prev, newTemplate]);
+
+      const today = getTodayString();
+      const linkedMeal = allMeals.find(
+        (m) => m.date === today && m.category === med.linkToCategory,
+      );
       const computedTime = linkedMeal
         ? computeMedicationTime(
             linkedMeal.scheduledTime,
@@ -675,12 +751,70 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             med.minutesOffset,
           )
         : undefined;
-      const newMed: Medication = { ...med, id: uid(), computedTime };
-      if (USE_SQLITE) dbInsertMedication(newMed);
-      setMedications((prev) => [...prev, newMed]);
+      const todayMed: Medication = {
+        ...newTemplate,
+        templateId: newTemplate.id,
+        id: uid(),
+        computedTime,
+        completedAt: undefined,
+        skipped: false,
+        date: today,
+      };
+      if (USE_SQLITE) dbInsertMedication(todayMed);
+      setMedications((prev) => [...prev, todayMed]);
     },
     [allMeals],
   );
+
+  const addMedication = useCallback(
+    (med: Omit<MedicationTemplate, "id">) => addMedicationTemplate(med),
+    [addMedicationTemplate],
+  );
+
+  const updateMedicationTemplate = useCallback(
+    (id: string, patch: Partial<MedicationTemplate>) => {
+      setMedicationTemplates((prev) => {
+        const updated = prev.map((m) => (m.id === id ? { ...m, ...patch } : m));
+        return updated;
+      });
+      setMedications((prev) => {
+        const today = getTodayString();
+        return prev.map((m) => {
+          if (m.templateId !== id || m.date !== today) return m;
+          const linkedMeal = allMeals.find(
+            (meal) =>
+              meal.date === today &&
+              meal.category === (patch.linkToCategory ?? m.linkToCategory),
+          );
+          const updatedMed = {
+            ...m,
+            ...patch,
+            computedTime: linkedMeal
+              ? computeMedicationTime(
+                  linkedMeal.scheduledTime,
+                  patch.relationType ?? m.relationType,
+                  patch.minutesOffset ?? m.minutesOffset,
+                )
+              : undefined,
+          };
+          if (USE_SQLITE) dbInsertMedication(updatedMed);
+          return updatedMed;
+        });
+      });
+    },
+    [allMeals],
+  );
+
+  const deleteMedicationTemplate = useCallback((id: string) => {
+    setMedicationTemplates((prev) => prev.filter((m) => m.id !== id));
+    setMedications((prev) => {
+      const existing = prev.filter((m) => m.templateId === id);
+      if (USE_SQLITE) {
+        existing.forEach((med) => dbDeleteMedication(med.id));
+      }
+      return prev.filter((m) => m.templateId !== id);
+    });
+  }, []);
 
   const updateMedication = useCallback(
     (id: string, patch: Partial<Medication>) => {
@@ -829,7 +963,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteMeal,
         completeMeal,
         skipMeal,
-        medications: todayMeds,
+        medications,
+        todaysMedication,
+        medicationTemplates,
+        addMedicationTemplate,
+        updateMedicationTemplate,
+        deleteMedicationTemplate,
         addMedication,
         updateMedication,
         deleteMedication,

@@ -9,7 +9,7 @@ import {
 } from "@/utils/notifications";
 
 export function NotificationScheduler() {
-  const { todayMeals, medications } = useApp();
+  const { todayMeals, todaysMedication } = useApp();
 
   useEffect(() => {
     todayMeals.forEach((meal) => {
@@ -22,14 +22,14 @@ export function NotificationScheduler() {
   }, [todayMeals]);
 
   useEffect(() => {
-    medications.forEach((med) => {
+    todaysMedication.forEach((med) => {
       if (!med.completedAt && !med.skipped && med.computedTime) {
         scheduleMedicationNotification(med);
       } else {
         cancelMedicationNotification(med.id);
       }
     });
-  }, [medications]);
+  }, [todaysMedication]);
 
   return null;
 }
