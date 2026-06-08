@@ -2,7 +2,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Redirect } from "expo-router";
 import React, { useMemo } from "react";
-import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  Modal,
+  Pressable,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { GlassCard } from "@/components/GlassCard";
@@ -30,6 +38,8 @@ export default function MissionControlScreen() {
     foods,
     todayStats,
     currentStreak,
+    showStreakModal,
+    clearStreakModal,
     completeMeal,
     skipMeal,
     completeMedication,
@@ -70,6 +80,25 @@ export default function MissionControlScreen() {
   return (
     <View style={styles.container}>
       <SpaceBackground />
+
+      <Modal transparent animationType="fade" visible={showStreakModal}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Streak Increased!</Text>
+            <Text style={styles.modalSubtitle}>
+              You're on a {currentStreak}-day streak
+            </Text>
+            <Pressable
+              style={styles.modalButton}
+              onPress={() => {
+                clearStreakModal();
+              }}
+            >
+              <Text style={styles.modalButtonText}>Shatra Shatora ❤️</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       <ScrollView
         contentContainerStyle={[
@@ -315,6 +344,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalBox: {
+    backgroundColor: "#071124",
+    padding: 20,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  modalTitle: {
+    color: "#F8FAFC",
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  modalSubtitle: { color: "#94A3B8", fontSize: 14, marginBottom: 16 },
+  modalButton: {
+    backgroundColor: "#7C3AED",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  modalButtonText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
   streakText: { color: "#FBBF24", fontSize: 16, fontWeight: "700" },
   progressCard: { padding: 20, marginBottom: 16 },
   progressRow: { flexDirection: "row", gap: 20, alignItems: "center" },

@@ -382,6 +382,8 @@ interface AppContextType {
   };
   loaded: boolean;
   currentStreak: number;
+  showStreakModal: boolean;
+  clearStreakModal: () => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -409,7 +411,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([]);
   const [dayTemplates, setDayTemplates] = useState<DayTemplate[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [currentStreak] = useState(3);
+  const [currentStreak, setCurrentStreak] = useState<number>(0);
+  const [lastStreakDate, setLastStreakDate] = useState<string | null>(null);
+  const [streakIncreased, setStreakIncreased] = useState<boolean>(false);
+  const [showStreakModal, setShowStreakModal] = useState<boolean>(false);
   const [loaded, setLoaded] = useState(false);
 
   // ── Bootstrap (load from SQLite or AsyncStorage) ────────────────────────
@@ -589,6 +594,67 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (USE_SQLITE) dbSetSetting("onboarding", "true");
     else AsyncStorage.setItem("onboarding", "true");
   }, []);
+
+  // ── Streak processing ───────────────────────────────────────────────────
+  const clearStreakModal = useCallback(() => {
+    setShowStreakModal(false);
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+
+    (async () => {
+      const today = getTodayString();
+      try {
+        const raw = USE_SQLITE
+          ? dbGetSetting("streakState")
+          : await AsyncStorage.getItem("streakState");
+        const parsed = raw
+          ? JSON.parse(raw)
+          : { current: 0, lastDate: null, increased: false };
+
+        // Day changed: reset the increased flag to allow modal to trigger again
+        if (parsed.lastDate !== today) {
+          parsed.increased = false;
+          parsed.lastDate = today;
+        }
+
+        // Calculate today's adherence (from derived values)
+        const mealsCompleted = todayMeals.filter((m) => m.completedAt).length;
+        const medsCompleted = todaysMedication.filter(
+          (m) => m.completedAt,
+        ).length;
+        const totalEvents = todayMeals.length + todaysMedication.length;
+        const todayAdherence =
+          totalEvents > 0
+            ? Math.round(((mealsCompleted + medsCompleted) / totalEvents) * 100)
+            : 0;
+
+        // Check if adherence >= 1% and update streak
+        if (todayAdherence >= 1 && !parsed.increased) {
+          const newStreak = (parsed.current ?? 0) + 1;
+          parsed.current = newStreak;
+          parsed.increased = true;
+          setCurrentStreak(newStreak);
+          setStreakIncreased(true);
+          setShowStreakModal(true);
+        } else if (todayAdherence === 0) {
+          // Reset streak if adherence is 0
+          parsed.current = 0;
+          setCurrentStreak(0);
+        } else {
+          setCurrentStreak(parsed.current ?? 0);
+        }
+
+        const encoded = JSON.stringify(parsed);
+        if (USE_SQLITE) dbSetSetting("streakState", encoded);
+        else await AsyncStorage.setItem("streakState", encoded);
+        setLastStreakDate(today);
+      } catch (_) {
+        // ignore
+      }
+    })();
+  }, [loaded, todayMeals, todaysMedication]);
 
   // ── Foods ─────────────────────────────────────────────────────────────────
   const addFood = useCallback((food: Omit<Food, "id">) => {
@@ -986,6 +1052,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         todayStats,
         loaded,
         currentStreak,
+        showStreakModal,
+        clearStreakModal,
       }}
     >
       {children}

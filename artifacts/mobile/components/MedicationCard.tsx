@@ -90,7 +90,7 @@ export function MedicationCard({
         <View style={styles.editActions}>
           {onEdit && (
             <Pressable
-              style={[styles.smallBtn, styles.editBtn]}
+              style={[styles.actionBtn, styles.editBtn]}
               onPress={onEdit}
             >
               <Ionicons name="create" size={16} color="#22D3EE" />
@@ -101,7 +101,7 @@ export function MedicationCard({
           )}
           {onDelete && (
             <Pressable
-              style={[styles.smallBtn, styles.deleteBtn]}
+              style={[styles.actionBtn, styles.deleteBtn]}
               onPress={onDelete}
             >
               <Ionicons name="trash" size={16} color="#F87171" />
