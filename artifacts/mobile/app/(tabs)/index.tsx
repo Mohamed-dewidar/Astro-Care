@@ -65,9 +65,9 @@ export default function MissionControlScreen() {
   }, [foods]);
 
   const upcoming = useMemo(() => {
-    return [...todayMeals]
-      .filter((m) => !m.completedAt && !m.skipped)
-      .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime));
+    return [...todayMeals].sort((a, b) =>
+      a.scheduledTime.localeCompare(b.scheduledTime),
+    );
   }, [todayMeals]);
 
   const nextMeal = upcoming[0];
@@ -226,7 +226,7 @@ export default function MissionControlScreen() {
               <Ionicons name="rocket" size={16} color="#7C3AED" />
               <Text style={styles.sectionTitle}>Upcoming Missions</Text>
             </View>
-            {upcoming.slice(0, 3).map((meal) => (
+            {upcoming.map((meal) => (
               <MealPlanetCard
                 key={meal.id}
                 meal={meal}
