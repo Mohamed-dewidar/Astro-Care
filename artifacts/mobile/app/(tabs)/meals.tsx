@@ -698,7 +698,7 @@ export default function MealsScreen() {
                   { paddingBottom: insets.bottom + 16 },
                 ]}
               >
-                <ScrollView>
+                <ScrollView showsVerticalScrollIndicator={false}>
                   <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>Schedule Meal</Text>
                     <Pressable

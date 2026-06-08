@@ -60,7 +60,7 @@ function ClassicTabLayout() {
           borderTopWidth: 1,
           borderTopColor: "rgba(255,255,255,0.08)",
           elevation: 0,
-          height: 80 + insets.bottom,
+          height: 60,
           paddingBottom: insets.bottom,
         },
         tabBarBackground: () =>

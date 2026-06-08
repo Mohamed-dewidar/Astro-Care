@@ -1,31 +1,38 @@
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-// ─── Locale detection (12 vs 24-hour clock) ──────────────────────────────────
-
-function detectIs12Hour(): boolean {
-  try {
-    const formatted = new Intl.DateTimeFormat(undefined, {
-      hour: "numeric",
-      hour12: undefined,
-    }).format(new Date(2000, 0, 1, 13, 0, 0));
-    return /[AaPp][Mm]/.test(formatted);
-  } catch {
-    return false;
-  }
-}
+import { detectIs12Hour } from "@/utils/dateUtils";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ITEM_H = 40;    // height of each row
-const VISIBLE = 3;   // rows visible in the drum (odd: center = selected)
+const ITEM_H = 40; // height of each row
+const VISIBLE = 3; // rows visible in the drum (odd: center = selected)
 const PAD = Math.floor(VISIBLE / 2); // 1 padding row top + bottom
 
-const HOURS_24 = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
-const HOURS_12 = Array.from({ length: 12 }, (_, i) => String(i === 0 ? 12 : i).padStart(2, "0"));
-const MINUTES  = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
-const AMPM     = ["AM", "PM"];
+const HOURS_24 = Array.from({ length: 24 }, (_, i) =>
+  String(i).padStart(2, "0"),
+);
+const HOURS_12 = Array.from({ length: 12 }, (_, i) =>
+  String(i === 0 ? 12 : i).padStart(2, "0"),
+);
+const MINUTES = Array.from({ length: 60 }, (_, i) =>
+  String(i).padStart(2, "0"),
+);
+const AMPM = ["AM", "PM"];
 
 // ─── Single scroll column ────────────────────────────────────────────────────
 
@@ -45,7 +52,10 @@ function Wheel({ items, selectedIndex, onChange, width = 64 }: WheelProps) {
   // Scroll to initial position once
   useEffect(() => {
     const t = setTimeout(() => {
-      scrollRef.current?.scrollTo({ y: selectedIndex * ITEM_H, animated: false });
+      scrollRef.current?.scrollTo({
+        y: selectedIndex * ITEM_H,
+        animated: false,
+      });
       isMounted.current = true;
     }, 60);
     return () => clearTimeout(t);
@@ -71,7 +81,7 @@ function Wheel({ items, selectedIndex, onChange, width = 64 }: WheelProps) {
         onChange(clamped);
       }
     },
-    [items.length, onChange]
+    [items.length, onChange],
   );
 
   return (
@@ -83,7 +93,9 @@ function Wheel({ items, selectedIndex, onChange, width = 64 }: WheelProps) {
         ref={scrollRef}
         style={{ height: ITEM_H * VISIBLE }}
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
         snapToInterval={ITEM_H}
+        snapToAlignment="center"
         decelerationRate="fast"
         scrollEventThrottle={8}
         onScroll={handleScroll}
@@ -102,7 +114,11 @@ function Wheel({ items, selectedIndex, onChange, width = 64 }: WheelProps) {
               <Text
                 style={[
                   styles.itemBase,
-                  isSelected ? styles.itemSelected : dist === 1 ? styles.itemNear : styles.itemFar,
+                  isSelected
+                    ? styles.itemSelected
+                    : dist === 1
+                      ? styles.itemNear
+                      : styles.itemFar,
                 ]}
               >
                 {item}
@@ -131,7 +147,7 @@ function Wheel({ items, selectedIndex, onChange, width = 64 }: WheelProps) {
 // ─── Public TimePicker ────────────────────────────────────────────────────────
 
 interface TimePickerProps {
-  value: string;           // always stored as "HH:MM" 24-hour
+  value: string; // always stored as "HH:MM" 24-hour
   onChange: (time: string) => void;
   label?: string;
 }
@@ -139,20 +155,23 @@ interface TimePickerProps {
 export function TimePicker({ value, onChange, label }: TimePickerProps) {
   const is12 = useMemo(detectIs12Hour, []);
 
-  const parts   = value.split(":");
-  const hour24  = Math.min(parseInt(parts[0] ?? "8", 10), 23);
-  const minute  = Math.min(parseInt(parts[1] ?? "0", 10), 59);
+  const parts = value.split(":");
+  const hour24 = Math.min(parseInt(parts[0] ?? "8", 10), 23);
+  const minute = Math.min(parseInt(parts[1] ?? "0", 10), 59);
 
   // Derive 12-hour state
-  const isPM   = hour24 >= 12;
+  const isPM = hour24 >= 12;
   const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
   // Index in HOURS_12: "12"=0, "01"=1, …, "11"=11
   const hour12Idx = hour12 === 12 ? 0 : hour12;
 
   // ── 24-hour handlers ──────────────────────────────────────────────────────
   const handle24Hour = useCallback(
-    (i: number) => onChange(`${String(i).padStart(2, "0")}:${String(minute).padStart(2, "0")}`),
-    [minute, onChange]
+    (i: number) =>
+      onChange(
+        `${String(i).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+      ),
+    [minute, onChange],
   );
 
   // ── 12-hour handlers ──────────────────────────────────────────────────────
@@ -160,23 +179,35 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
     (i: number) => {
       // i is 0..11, but HOURS_12[0] = "12", [1] = "01", etc.
       const displayHour = i === 0 ? 12 : i;
-      let h24 = isPM ? (displayHour === 12 ? 12 : displayHour + 12) : (displayHour === 12 ? 0 : displayHour);
-      onChange(`${String(h24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
+      let h24 = isPM
+        ? displayHour === 12
+          ? 12
+          : displayHour + 12
+        : displayHour === 12
+          ? 0
+          : displayHour;
+      onChange(
+        `${String(h24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+      );
     },
-    [minute, isPM, onChange]
+    [minute, isPM, onChange],
   );
 
   const handleMinute = useCallback(
     (i: number) => {
-      onChange(`${String(hour24).padStart(2, "0")}:${String(i).padStart(2, "0")}`);
+      onChange(
+        `${String(hour24).padStart(2, "0")}:${String(i).padStart(2, "0")}`,
+      );
     },
-    [hour24, onChange]
+    [hour24, onChange],
   );
 
   const toggleAMPM = useCallback(() => {
     let newH = isPM ? hour24 - 12 : hour24 + 12;
     newH = Math.max(0, Math.min(23, newH));
-    onChange(`${String(newH).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
+    onChange(
+      `${String(newH).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+    );
   }, [isPM, hour24, minute, onChange]);
 
   // Format preview
@@ -212,8 +243,12 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
             />
             {/* AM / PM toggle */}
             <Pressable onPress={toggleAMPM} style={styles.ampmBtn}>
-              <Text style={[styles.ampmText, !isPM && styles.ampmActive]}>AM</Text>
-              <Text style={[styles.ampmText, isPM && styles.ampmActive]}>PM</Text>
+              <Text style={[styles.ampmText, !isPM && styles.ampmActive]}>
+                AM
+              </Text>
+              <Text style={[styles.ampmText, isPM && styles.ampmActive]}>
+                PM
+              </Text>
             </Pressable>
           </>
         ) : (
