@@ -44,6 +44,7 @@ export default function MissionControlScreen() {
     skipMeal,
     completeMedication,
     skipMedication,
+    timelines,
   } = useApp();
   const today = getTodayString();
 
@@ -258,20 +259,20 @@ export default function MissionControlScreen() {
             })}
           </View>
         )}
-        {todayMeals.length > 0 ? (
+        {timelines.length > 0 ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="time" size={16} color="#3B82F6" />
               <Text style={styles.sectionTitle}>Galaxy Timeline</Text>
             </View>
             <GlassCard style={styles.timeline}>
-              {[...todayMeals]
-                .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime))
-                .map((meal, i) => (
-                  <View key={meal.id} style={styles.timelineItem}>
+              {[...timelines]
+                .sort((a, b) => a.time.localeCompare(b.time))
+                .map((timelineItem, i) => (
+                  <View key={timelineItem.id} style={styles.timelineItem}>
                     <View style={styles.timelineTime}>
                       <Text style={styles.timelineTimeText}>
-                        {formatTime(meal.scheduledTime)}
+                        {formatTime(timelineItem.time)}
                       </Text>
                     </View>
                     <View style={styles.timelineLine}>
@@ -279,35 +280,45 @@ export default function MissionControlScreen() {
                         style={[
                           styles.timelineDot,
                           {
-                            backgroundColor: meal.completedAt
+                            backgroundColor: timelineItem.completedAt
                               ? "#22C55E"
-                              : meal.skipped
+                              : timelineItem.skipped
                                 ? "#475569"
-                                : isTimePast(meal.scheduledTime)
+                                : isTimePast(timelineItem.time)
                                   ? "#EF4444"
                                   : "#7C3AED",
                           },
                         ]}
                       />
-                      {i < todayMeals.length - 1 && (
+                      {i < timelines.length - 1 && (
                         <View style={styles.timelineConnector} />
                       )}
                     </View>
-                    <Text
-                      style={[
-                        styles.timelineName,
-                        {
-                          color: meal.completedAt
-                            ? "#22C55E"
-                            : meal.skipped
-                              ? "#475569"
-                              : "#F8FAFC",
-                        },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {meal.name}
-                    </Text>
+                    <View style={styles.timelineNameRow}>
+                      <Text
+                        style={[
+                          styles.timelineName,
+                          {
+                            color: timelineItem.completedAt
+                              ? "#22C55E"
+                              : timelineItem.skipped
+                                ? "#475569"
+                                : "#F8FAFC",
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {timelineItem.name}
+                      </Text>
+                      {timelineItem.type === "medication" && (
+                        <Ionicons
+                          name="medical"
+                          size={14}
+                          color="#22D3EE"
+                          style={styles.timelineNameIcon}
+                        />
+                      )}
+                    </View>
                   </View>
                 ))}
             </GlassCard>
@@ -454,19 +465,35 @@ const styles = StyleSheet.create({
   timeline: { padding: 16 },
   timelineItem: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 8,
+    alignItems: "stretch",
+    gap: 16,
+    minHeight: 40,
   },
   timelineTime: { width: 60 },
   timelineTimeText: { color: "#64748B", fontSize: 12 },
-  timelineLine: { alignItems: "center", width: 16 },
+  timelineLine: {
+    alignItems: "center",
+    width: 16,
+    display: "flex",
+    flexDirection: "column",
+  },
   timelineDot: { width: 10, height: 10, borderRadius: 5 },
   timelineConnector: {
     width: 2,
-    height: 20,
+    flexGrow: 1,
     backgroundColor: "rgba(255,255,255,0.08)",
     marginTop: 2,
   },
-  timelineName: { flex: 1, fontSize: 13, fontWeight: "500", marginTop: -1 },
+  timelineNameRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+  },
+  timelineNameIcon: {
+    minWidth: 20,
+    textAlign: "center",
+  },
+  timelineName: { fontSize: 13, fontWeight: "500", marginTop: -1 },
 });

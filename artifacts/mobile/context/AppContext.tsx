@@ -37,6 +37,7 @@ import type {
   Medication,
   MedicationTemplate,
   ScheduledMeal,
+  Timeline,
 } from "@/types";
 import { computeMedicationTime, getTodayString, uid } from "@/utils/dateUtils";
 
@@ -384,6 +385,7 @@ interface AppContextType {
   currentStreak: number;
   showStreakModal: boolean;
   clearStreakModal: () => void;
+  timelines: Timeline[];
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -415,6 +417,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [lastStreakDate, setLastStreakDate] = useState<string | null>(null);
   const [streakIncreased, setStreakIncreased] = useState<boolean>(false);
   const [showStreakModal, setShowStreakModal] = useState<boolean>(false);
+  const [timelines, setTimelines] = useState<Timeline[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   // ── Bootstrap (load from SQLite or AsyncStorage) ────────────────────────
@@ -588,6 +591,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     adherence,
   };
 
+  useEffect(() => {
+    if (!loaded) return;
+    const today = getTodayString();
+    const todaysMeals = allMeals.filter((m) => m.date === today);
+    const todaysMeds = medications.filter((m) => m.date === today);
+    const updatedTimelines: Timeline[] = [];
+
+    todaysMeals.forEach((meal) => {
+      updatedTimelines.push({
+        id: meal.id,
+        name: meal.name,
+        time: meal.scheduledTime,
+        type: "meal",
+        relatedId: meal.id,
+        completedAt: meal.completedAt,
+        skipped: meal.skipped,
+      });
+    });
+
+    todaysMeds.forEach((med) => {
+      updatedTimelines.push({
+        id: med.id,
+        name: med.name,
+        time: med.computedTime ?? "00:00",
+        type: "medication",
+        relatedId: med.id,
+        completedAt: med.completedAt,
+        skipped: med.skipped,
+      });
+    });
+
+    setTimelines(updatedTimelines);
+  }, [loaded, allMeals, medications]);
+
   // ── Onboarding ───────────────────────────────────────────────────────────
   const completeOnboarding = useCallback(() => {
     setOnboardingComplete(true);
@@ -606,6 +643,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       const today = getTodayString();
       try {
+        // Calculate today's adherence locally (from state values)
+        const todaysMeals = allMeals.filter((m) => m.date === today);
+        const todaysMeds = medications.filter((m) => m.date === today);
+        const mealsCompleted = todaysMeals.filter((m) => m.completedAt).length;
+        const medsCompleted = todaysMeds.filter((m) => m.completedAt).length;
+        const totalEvents = todaysMeals.length + todaysMeds.length;
+        const todayAdherence =
+          totalEvents > 0
+            ? Math.round(((mealsCompleted + medsCompleted) / totalEvents) * 100)
+            : 0;
+
         const raw = USE_SQLITE
           ? dbGetSetting("streakState")
           : await AsyncStorage.getItem("streakState");
@@ -618,17 +666,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           parsed.increased = false;
           parsed.lastDate = today;
         }
-
-        // Calculate today's adherence (from derived values)
-        const mealsCompleted = todayMeals.filter((m) => m.completedAt).length;
-        const medsCompleted = todaysMedication.filter(
-          (m) => m.completedAt,
-        ).length;
-        const totalEvents = todayMeals.length + todaysMedication.length;
-        const todayAdherence =
-          totalEvents > 0
-            ? Math.round(((mealsCompleted + medsCompleted) / totalEvents) * 100)
-            : 0;
 
         // Check if adherence >= 1% and update streak
         if (todayAdherence >= 1 && !parsed.increased) {
@@ -654,7 +691,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // ignore
       }
     })();
-  }, [loaded, todayMeals, todaysMedication]);
+  }, [loaded, allMeals, medications]);
 
   // ── Foods ─────────────────────────────────────────────────────────────────
   const addFood = useCallback((food: Omit<Food, "id">) => {
@@ -1054,6 +1091,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         currentStreak,
         showStreakModal,
         clearStreakModal,
+        timelines,
       }}
     >
       {children}

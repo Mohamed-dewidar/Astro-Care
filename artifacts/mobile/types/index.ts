@@ -118,6 +118,16 @@ export interface Medication {
   date: string;
 }
 
+export interface Timeline {
+  id: string;
+  name: string;
+  time: string;
+  type: "meal" | "medication";
+  relatedId: string;
+  completedAt?: string;
+  skipped?: boolean;
+}
+
 export interface MedicationTemplate {
   id: string;
   name: string;
