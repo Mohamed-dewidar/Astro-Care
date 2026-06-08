@@ -4,7 +4,7 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { GlassCard } from "@/components/GlassCard";
-import { Medication, ScheduledMeal } from "@/types";
+import { Medication, MEAL_CATEGORY_LABELS, ScheduledMeal } from "@/types";
 import { formatTime } from "@/utils/dateUtils";
 
 interface MedicationCardProps {
@@ -56,14 +56,16 @@ export function MedicationCard({
           {medication.dosage && (
             <Text style={styles.dosage}>{medication.dosage}</Text>
           )}
-          {linkedMeal && (
+          {(linkedMeal || medication.linkToCategory) && (
             <View style={styles.mealLink}>
               <Ionicons name="link" size={11} color="#94A3B8" />
               <Text style={styles.mealLinkText}>
                 {medication.relationType === "before"
                   ? `${medication.minutesOffset}min before`
-                  : `${medication.minutesOffset}min after`}{" "}
-                {linkedMeal.name}
+                  : `${medication.minutesOffset}min after`} 
+                {linkedMeal
+                  ? linkedMeal.name
+                  : MEAL_CATEGORY_LABELS[medication.linkToCategory]}
               </Text>
             </View>
           )}

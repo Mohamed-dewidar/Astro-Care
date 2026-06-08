@@ -215,7 +215,7 @@ export default function MissionControlScreen() {
             </View>
             {upcomingMeds.map((med) => {
               const linkedMeal = todayMeals.find(
-                (m) => m.id === med.linkedMealId,
+                (m) => m.category === med.linkToCategory,
               );
               return (
                 <MedicationCard

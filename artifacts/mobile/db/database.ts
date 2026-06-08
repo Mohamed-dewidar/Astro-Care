@@ -1,7 +1,8 @@
 import * as SQLite from "expo-sqlite";
 import { Platform } from "react-native";
 
-import type { Achievement, DayTemplate, Food, MealTemplate, Medication, ScheduledMeal } from "@/types";
+import { MEAL_CATEGORY_LABELS } from "@/types";
+import type { Achievement, DayTemplate, Food, MealCategory, MealTemplate, Medication, ScheduledMeal } from "@/types";
 
 let _db: SQLite.SQLiteDatabase | null = null;
 
@@ -9,7 +10,9 @@ function getDb(): SQLite.SQLiteDatabase {
   if (!_db) _db = SQLite.openDatabaseSync("astrocare.db");
   return _db;
 }
-
+function isMealCategory(value: string | null): value is MealCategory {
+  return value !== null && value in MEAL_CATEGORY_LABELS;
+}
 // ─── Schema ────────────────────────────────────────────────────────────────
 
 export function initDatabase(): void {
@@ -226,7 +229,9 @@ function rowToMed(r: MedRow): Medication {
     quantity: r.quantity ?? undefined, image: r.image ?? undefined,
     notes: r.notes ?? undefined,
     relationType: r.relation_type as "before" | "after",
-    linkedMealId: r.linked_meal_id ?? undefined,
+    linkToCategory: isMealCategory(r.linked_meal_id)
+      ? r.linked_meal_id
+      : (Object.keys(MEAL_CATEGORY_LABELS)[0] as MealCategory),
     minutesOffset: r.minutes_offset, computedTime: r.computed_time ?? undefined,
     completedAt: r.completed_at ?? undefined, skipped: r.skipped === 1, date: r.date,
   };
@@ -246,7 +251,7 @@ export function dbInsertMedication(med: Medication): void {
     [
       med.id, med.name, med.dosage ?? null, med.quantity ?? null,
       med.image ?? null, med.notes ?? null, med.relationType,
-      med.linkedMealId ?? null, med.minutesOffset, med.computedTime ?? null,
+      med.linkToCategory, med.minutesOffset, med.computedTime ?? null,
       med.completedAt ?? null, med.skipped ? 1 : 0, med.date,
     ]
   );

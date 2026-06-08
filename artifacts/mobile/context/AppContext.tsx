@@ -278,7 +278,7 @@ function buildTodayMeds(meals: ScheduledMeal[]): Medication[] {
       name: "Vitamin D3",
       dosage: "2000 IU",
       relationType: "after",
-      linkedMealId: breakfast.id,
+      linkToCategory: "breakfast",
       minutesOffset: 30,
       computedTime: computeMedicationTime(breakfast.scheduledTime, "after", 30),
       date: today,
@@ -290,7 +290,7 @@ function buildTodayMeds(meals: ScheduledMeal[]): Medication[] {
       name: "Omega-3",
       dosage: "1000mg",
       relationType: "after",
-      linkedMealId: lunch.id,
+      linkToCategory: "lunch",
       minutesOffset: 15,
       computedTime: computeMedicationTime(lunch.scheduledTime, "after", 15),
       date: today,
@@ -609,6 +609,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const completeMeal = useCallback((id: string) => {
     const completedAt = new Date().toISOString();
+    const completedMeal = allMeals.find((m) => m.id === id);
     setAllMeals((prev) => {
       const updated = prev.map((m) =>
         m.id === id ? { ...m, completedAt, skipped: false } : m,
@@ -619,11 +620,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+    if (!completedMeal) return;
     setMedications((prev) => {
       const now = new Date(completedAt);
       const actualTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
       const updated = prev.map((med) => {
-        if (med.linkedMealId !== id) return med;
+        if (med.linkToCategory !== completedMeal.category) return med;
         const newTime = computeMedicationTime(
           actualTime,
           med.relationType,
@@ -647,7 +649,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
-  }, []);
+  }, [allMeals]);
 
   const skipMeal = useCallback((id: string) => {
     setAllMeals((prev) => {
@@ -665,9 +667,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Medications ───────────────────────────────────────────────────────────
   const addMedication = useCallback(
     (med: Omit<Medication, "id">) => {
-      const linkedMeal = med.linkedMealId
-        ? allMeals.find((m) => m.id === med.linkedMealId)
-        : undefined;
+      const linkedMeal = allMeals.find((m) => m.category === med.linkToCategory);
       const computedTime = linkedMeal
         ? computeMedicationTime(
             linkedMeal.scheduledTime,
@@ -779,7 +779,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         skipped: false,
       }));
       const newMeds: Medication[] = template.medications.map((med) => {
-        const linked = newMeals.find((m) => m.category === med.linkedMealId);
+        const linked = newMeals.find((m) => m.category === med.linkToCategory);
         const computedTime = linked
           ? computeMedicationTime(
               linked.scheduledTime,

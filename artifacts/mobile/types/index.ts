@@ -28,13 +28,41 @@ export const MEAL_CATEGORY_LABELS: Record<MealCategory, string> = {
 };
 
 export const MEAL_CATEGORY_GROUPS = [
-  { label: "Breakfast", categories: ["pre-breakfast", "breakfast", "post-breakfast"] as MealCategory[] },
-  { label: "Lunch", categories: ["pre-lunch", "lunch", "post-lunch"] as MealCategory[] },
-  { label: "Dinner", categories: ["pre-dinner", "dinner", "post-dinner"] as MealCategory[] },
-  { label: "Snacks", categories: ["morning-snack", "afternoon-snack", "evening-snack"] as MealCategory[] },
+  {
+    label: "Breakfast",
+    categories: [
+      "pre-breakfast",
+      "breakfast",
+      "post-breakfast",
+    ] as MealCategory[],
+  },
+  {
+    label: "Lunch",
+    categories: ["pre-lunch", "lunch", "post-lunch"] as MealCategory[],
+  },
+  {
+    label: "Dinner",
+    categories: ["pre-dinner", "dinner", "post-dinner"] as MealCategory[],
+  },
+  {
+    label: "Snacks",
+    categories: [
+      "morning-snack",
+      "afternoon-snack",
+      "evening-snack",
+    ] as MealCategory[],
+  },
 ];
 
-export const FOOD_UNITS = ["g", "kg", "ml", "cup", "piece", "tbsp", "tsp"] as const;
+export const FOOD_UNITS = [
+  "g",
+  "kg",
+  "ml",
+  "cup",
+  "piece",
+  "tbsp",
+  "tsp",
+] as const;
 export type FoodUnit = (typeof FOOD_UNITS)[number];
 
 export interface Food {
@@ -76,12 +104,12 @@ export interface ScheduledMeal {
 export interface Medication {
   id: string;
   name: string;
+  linkToCategory: MealCategory;
+  relationType: "before" | "after";
   dosage?: string;
   quantity?: string;
   image?: string;
   notes?: string;
-  relationType: "before" | "after";
-  linkedMealId?: string;
   minutesOffset: number;
   computedTime?: string;
   completedAt?: string;
@@ -102,7 +130,10 @@ export interface DayTemplate {
   id: string;
   name: string;
   meals: Omit<ScheduledMeal, "id" | "date" | "completedAt" | "skipped">[];
-  medications: Omit<Medication, "id" | "date" | "completedAt" | "skipped" | "computedTime">[];
+  medications: Omit<
+    Medication,
+    "id" | "date" | "completedAt" | "skipped" | "computedTime"
+  >[];
 }
 
 export interface Achievement {
