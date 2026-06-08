@@ -53,7 +53,7 @@ function buildScheduleDays() {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
-    const value = d.toISOString().split("T")[0];
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const label =
       i === 0
         ? "Today"
@@ -284,15 +284,18 @@ export default function MealsScreen() {
   const openSchedule = (t: MealTemplate) => {
     setSchedulingTemplate(t);
     setScheduleDate(SCHEDULE_DAYS[0].value);
-    setScheduleTime(
-      t.category === "breakfast"
-        ? "08:00"
-        : t.category === "lunch"
-          ? "13:00"
-          : t.category === "dinner"
-            ? "19:00"
-            : "10:00",
-    );
+    setScheduleTime(() => {
+      switch (t.category) {
+        case "breakfast":
+          return "13:00";
+        case "lunch":
+          return "18:00";
+        case "dinner":
+          return "22:00";
+        default:
+          return "10:00";
+      }
+    });
     setScheduleModal(true);
   };
 
@@ -303,6 +306,7 @@ export default function MealsScreen() {
 
   const confirmSchedule = () => {
     if (!schedulingTemplate) return;
+
     addMeal({
       name: schedulingTemplate.name,
       category: schedulingTemplate.category,
