@@ -72,7 +72,6 @@ function Wheel({ items, selectedIndex, onChange, width = 64 }: WheelProps) {
 
   const handleScroll = useCallback(
     (e: { nativeEvent: { contentOffset: { y: number } } }) => {
-      console.log("handleScroll", e.nativeEvent.contentOffset.y);
       const y = e.nativeEvent.contentOffset.y;
       const idx = Math.round(y / ITEM_H);
       const clamped = Math.max(0, Math.min(idx, items.length - 1));
