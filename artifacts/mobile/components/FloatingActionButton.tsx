@@ -30,10 +30,10 @@ export const FloatingActionButton = forwardRef<FABHandle, FABProps>(
   function FloatingActionButton({ actions }, ref) {
     const [open, setOpen] = useState(false);
     const insets = useSafeAreaInsets();
-    const rotateAnim = useRef(new Animated.Value(0)).current;
     const glowAnim = useRef(new Animated.Value(0)).current;
     const itemAnims = useRef(actions.map(() => new Animated.Value(0))).current;
     const backdropAnim = useRef(new Animated.Value(0)).current;
+    const [rotation, setRotation] = useState("0deg");
 
     useImperativeHandle(
       ref,
@@ -46,12 +46,6 @@ export const FloatingActionButton = forwardRef<FABHandle, FABProps>(
     useEffect(() => {
       const toValue = open ? 1 : 0;
       Animated.parallel([
-        Animated.spring(rotateAnim, {
-          toValue,
-          useNativeDriver: true,
-          tension: 100,
-          friction: 8,
-        }),
         Animated.timing(glowAnim, {
           toValue,
           duration: 200,
@@ -72,26 +66,21 @@ export const FloatingActionButton = forwardRef<FABHandle, FABProps>(
           }),
         ),
       ]).start();
+      setRotation(open ? "45deg" : "0deg");
     }, [open]);
-
-    const rotation = rotateAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: ["0deg", "45deg"],
-    });
 
     return (
       <>
         {open && (
           <Pressable
-            style={[StyleSheet.absoluteFillObject, { zIndex: 90 }]}
+            style={[
+              StyleSheet.absoluteFillObject,
+              styles.backdrop,
+              { zIndex: 90 },
+            ]}
             onPress={() => setOpen(false)}
           />
         )}
-
-        <Animated.View
-          style={[styles.backdrop, { opacity: backdropAnim }]}
-          pointerEvents="none"
-        />
 
         <View style={[styles.container, { bottom: insets.bottom + 90 }]}>
           {open &&

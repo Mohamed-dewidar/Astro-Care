@@ -4,7 +4,7 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "pnpm exec expo start ",
+    "dev": "exec expo start --tunnel",
     "build": "node scripts/build.js",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -66,5 +66,8 @@
     "expo-localization": "^17.0.9",
     "expo-notifications": "^0.32.17",
     "expo-sqlite": "~16.0.10"
+  },
+  "engines": {
+    "node": ">=24.0.0"
   }
 }

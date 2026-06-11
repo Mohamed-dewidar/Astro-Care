@@ -45,7 +45,6 @@ function ClassicTabLayout() {
   const colors = useColors();
   const colorScheme = useColorScheme();
   const isIOS = Platform.OS === "ios";
-  const isWeb = Platform.OS === "web";
   const insets = useSafeAreaInsets();
 
   return (
@@ -60,7 +59,7 @@ function ClassicTabLayout() {
           borderTopWidth: 1,
           borderTopColor: "rgba(255,255,255,0.08)",
           elevation: 0,
-          height: 60,
+          height: 60 + insets.bottom,
           paddingBottom: insets.bottom,
         },
         tabBarBackground: () =>

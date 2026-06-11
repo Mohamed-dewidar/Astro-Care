@@ -32,6 +32,8 @@ import {
   MealTemplate,
 } from "@/types";
 import { getTodayString, uid } from "@/utils/dateUtils";
+import TodayMeals from "@/components/Meals/TodayMeals";
+import { mealsStyles } from "@/styles/meals-styles";
 
 function confirmDelete(title: string, message: string, onConfirm: () => void) {
   if (Platform.OS === "web") {
@@ -198,6 +200,7 @@ export default function MealsScreen() {
     setNewMealCategory("breakfast");
     setSelectedFoodIds([]);
     setFoodPickerSearch("");
+    console.log("closeMealModal", fabRef.current);
     fabRef.current?.close();
   };
 
@@ -321,31 +324,34 @@ export default function MealsScreen() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <View style={styles.container}>
+    <View style={mealsStyles.container}>
       <SpaceBackground />
 
       <ScrollView
         contentContainerStyle={[
-          styles.scroll,
+          mealsStyles.scroll,
           { paddingTop: topPad + 12, paddingBottom: insets.bottom + 100 },
         ]}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Planetary Meals</Text>
-          <Text style={styles.subtitle}>
+        <View style={mealsStyles.header}>
+          <Text style={mealsStyles.title}>Planetary Meals</Text>
+          <Text style={mealsStyles.subtitle}>
             {sortedMeals.length} orbits scheduled today
           </Text>
         </View>
 
         {/* Tab bar */}
-        <View style={styles.tabBarWrapper}>
-          <GlassCard style={styles.tabBar} noBorder>
+        <View style={mealsStyles.tabBarWrapper}>
+          <GlassCard style={mealsStyles.tabBar} noBorder>
             {(["today", "foods", "meals"] as TabType[]).map((tab) => (
               <Pressable
                 key={tab}
-                style={[styles.tab, activeTab === tab && styles.activeTab]}
+                style={[
+                  mealsStyles.tab,
+                  activeTab === tab && mealsStyles.activeTab,
+                ]}
                 onPress={() => {
                   setActiveTab(tab);
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -361,8 +367,8 @@ export default function MealsScreen() {
                 )}
                 <Text
                   style={[
-                    styles.tabText,
-                    activeTab === tab && styles.activeTabText,
+                    mealsStyles.tabText,
+                    activeTab === tab && mealsStyles.activeTabText,
                   ]}
                 >
                   {tab === "today"
@@ -378,36 +384,21 @@ export default function MealsScreen() {
 
         {/* ── Today ── */}
         {activeTab === "today" && (
-          <View>
-            {sortedMeals.length === 0 ? (
-              <View style={styles.empty}>
-                <Ionicons name="planet-outline" size={48} color="#475569" />
-                <Text style={styles.emptyTitle}>No missions today</Text>
-                <Text style={styles.emptyText}>
-                  Add meals to start your health mission
-                </Text>
-              </View>
-            ) : (
-              sortedMeals.map((meal) => (
-                <MealPlanetCard
-                  key={meal.id}
-                  meal={meal}
-                  foodNames={foodMap}
-                  onComplete={() => completeMeal(meal.id)}
-                  onSkip={() => skipMeal(meal.id)}
-                />
-              ))
-            )}
-          </View>
+          <TodayMeals
+            sortedMeals={sortedMeals}
+            foodMap={foodMap}
+            completeMeal={completeMeal}
+            skipMeal={skipMeal}
+          />
         )}
 
         {/* ── Foods ── */}
         {activeTab === "foods" && (
           <View>
-            <GlassCard style={styles.searchBar}>
+            <GlassCard style={mealsStyles.searchBar}>
               <Ionicons name="search" size={18} color="#64748B" />
               <TextInput
-                style={styles.searchInput}
+                style={mealsStyles.searchInput}
                 placeholder="Search foods..."
                 placeholderTextColor="#475569"
                 value={searchQuery}
@@ -415,18 +406,20 @@ export default function MealsScreen() {
               />
             </GlassCard>
             {filteredFoods.length === 0 ? (
-              <View style={styles.empty}>
+              <View style={mealsStyles.empty}>
                 <Ionicons name="nutrition-outline" size={48} color="#475569" />
-                <Text style={styles.emptyTitle}>No foods found</Text>
-                <Text style={styles.emptyText}>Add foods to your database</Text>
+                <Text style={mealsStyles.emptyTitle}>No foods found</Text>
+                <Text style={mealsStyles.emptyText}>
+                  Add foods to your database
+                </Text>
               </View>
             ) : (
               filteredFoods.map((food) => (
-                <GlassCard key={food.id} style={styles.foodCard}>
-                  <View style={styles.foodRow}>
+                <GlassCard key={food.id} style={mealsStyles.foodCard}>
+                  <View style={mealsStyles.foodRow}>
                     <View
                       style={[
-                        styles.foodIcon,
+                        mealsStyles.foodIcon,
                         {
                           backgroundColor: food.isFavorite
                             ? "rgba(251,191,36,0.15)"
@@ -440,10 +433,10 @@ export default function MealsScreen() {
                         color={food.isFavorite ? "#FBBF24" : "#7C3AED"}
                       />
                     </View>
-                    <View style={styles.foodInfo}>
-                      <Text style={styles.foodName}>{food.name}</Text>
+                    <View style={mealsStyles.foodInfo}>
+                      <Text style={mealsStyles.foodName}>{food.name}</Text>
                       {food.calories !== undefined && (
-                        <Text style={styles.foodMacros}>
+                        <Text style={mealsStyles.foodMacros}>
                           {food.calories} kcal
                           {food.protein !== undefined
                             ? ` · ${food.protein}g protein`
@@ -451,10 +444,10 @@ export default function MealsScreen() {
                         </Text>
                       )}
                     </View>
-                    <View style={styles.foodActions}>
+                    <View style={mealsStyles.foodActions}>
                       <Pressable
                         onPress={() => toggleFavoriteFood(food.id)}
-                        style={styles.foodActionBtn}
+                        style={mealsStyles.foodActionBtn}
                       >
                         <Ionicons
                           name={food.isFavorite ? "star" : "star-outline"}
@@ -470,7 +463,7 @@ export default function MealsScreen() {
                             () => deleteFood(food.id),
                           )
                         }
-                        style={styles.foodActionBtn}
+                        style={mealsStyles.foodActionBtn}
                       >
                         <Ionicons
                           name="trash-outline"
@@ -489,10 +482,10 @@ export default function MealsScreen() {
         {/* ── Meals library ── */}
         {activeTab === "meals" && (
           <View>
-            <GlassCard style={styles.searchBar}>
+            <GlassCard style={mealsStyles.searchBar}>
               <Ionicons name="search" size={18} color="#64748B" />
               <TextInput
-                style={styles.searchInput}
+                style={mealsStyles.searchInput}
                 placeholder="Search meals..."
                 placeholderTextColor="#475569"
                 value={mealSearch}
@@ -501,19 +494,21 @@ export default function MealsScreen() {
             </GlassCard>
 
             {mealTemplates.length === 0 ? (
-              <View style={styles.empty}>
+              <View style={mealsStyles.empty}>
                 <Ionicons name="restaurant-outline" size={48} color="#475569" />
-                <Text style={styles.emptyTitle}>No meal templates yet</Text>
-                <Text style={styles.emptyText}>
+                <Text style={mealsStyles.emptyTitle}>
+                  No meal templates yet
+                </Text>
+                <Text style={mealsStyles.emptyText}>
                   Save meal templates here and schedule them{"\n"}to any day in
                   one tap
                 </Text>
               </View>
             ) : filteredMeals.length === 0 ? (
-              <View style={styles.empty}>
+              <View style={mealsStyles.empty}>
                 <Ionicons name="search" size={48} color="#475569" />
-                <Text style={styles.emptyTitle}>No meals match</Text>
-                <Text style={styles.emptyText}>
+                <Text style={mealsStyles.emptyTitle}>No meals match</Text>
+                <Text style={mealsStyles.emptyText}>
                   Try a different search term
                 </Text>
               </View>
@@ -521,15 +516,15 @@ export default function MealsScreen() {
               filteredMeals.map((t) => {
                 const foodCount = t.items.length;
                 return (
-                  <GlassCard key={t.id} style={styles.tplCard}>
+                  <GlassCard key={t.id} style={mealsStyles.tplCard}>
                     {/* Header row */}
-                    <View style={styles.tplHeader}>
-                      <View style={styles.tplIconWrap}>
+                    <View style={mealsStyles.tplHeader}>
+                      <View style={mealsStyles.tplIconWrap}>
                         <Ionicons name="restaurant" size={18} color="#7C3AED" />
                       </View>
-                      <View style={styles.tplInfo}>
-                        <Text style={styles.tplName}>{t.name}</Text>
-                        <Text style={styles.tplMeta}>
+                      <View style={mealsStyles.tplInfo}>
+                        <Text style={mealsStyles.tplName}>{t.name}</Text>
+                        <Text style={mealsStyles.tplMeta}>
                           {MEAL_CATEGORY_LABELS[t.category]} · {foodCount} food
                           {foodCount !== 1 ? "s" : ""}
                         </Text>
@@ -557,11 +552,11 @@ export default function MealsScreen() {
                       <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
-                        style={styles.tplFoodScroll}
+                        style={mealsStyles.tplFoodScroll}
                       >
                         {t.items.map((item) => (
-                          <View key={item.id} style={styles.tplFoodChip}>
-                            <Text style={styles.tplFoodChipText}>
+                          <View key={item.id} style={mealsStyles.tplFoodChip}>
+                            <Text style={mealsStyles.tplFoodChipText}>
                               {foodMap[item.foodId] ?? "—"}
                             </Text>
                           </View>
@@ -570,26 +565,26 @@ export default function MealsScreen() {
                     )}
 
                     {/* Action buttons */}
-                    <View style={styles.tplActions}>
+                    <View style={mealsStyles.tplActions}>
                       <Pressable
-                        style={styles.tplEditBtn}
+                        style={mealsStyles.tplEditBtn}
                         onPress={() => openEdit(t)}
                       >
                         <Ionicons name="pencil" size={14} color="#94A3B8" />
-                        <Text style={styles.tplEditBtnText}>Edit</Text>
+                        <Text style={mealsStyles.tplEditBtnText}>Edit</Text>
                       </Pressable>
                       <Pressable
-                        style={styles.tplScheduleBtn}
+                        style={mealsStyles.tplScheduleBtn}
                         onPress={() => openSchedule(t)}
                       >
                         <LinearGradient
                           colors={["#7C3AED", "#3B82F6"]}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
-                          style={styles.tplScheduleGrad}
+                          style={mealsStyles.tplScheduleGrad}
                         >
                           <Ionicons name="calendar" size={14} color="#FFF" />
-                          <Text style={styles.tplScheduleBtnText}>
+                          <Text style={mealsStyles.tplScheduleBtnText}>
                             Schedule
                           </Text>
                         </LinearGradient>
@@ -629,51 +624,51 @@ export default function MealsScreen() {
         onRequestClose={closeFoodModal}
       >
         <KeyboardAvoidingView
-          style={styles.modalOverlay}
+          style={mealsStyles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
         >
-          <Pressable style={styles.modalOverlay} onPress={closeFoodModal}>
+          <Pressable style={mealsStyles.modalOverlay} onPress={closeFoodModal}>
             <Pressable>
               <GlassCard
                 style={[
-                  styles.modalCard,
+                  mealsStyles.modalCard,
                   { paddingBottom: insets.bottom + 16 },
                 ]}
               >
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>New Food</Text>
+                <View style={mealsStyles.modalHeader}>
+                  <Text style={mealsStyles.modalTitle}>New Food</Text>
                   <Pressable
                     onPress={closeFoodModal}
-                    style={styles.closeBtn}
+                    style={mealsStyles.closeBtn}
                     hitSlop={8}
                   >
                     <Ionicons name="close" size={20} color="#94A3B8" />
                   </Pressable>
                 </View>
                 <TextInput
-                  style={styles.input}
+                  style={mealsStyles.input}
                   placeholder="Food name *"
                   placeholderTextColor="#475569"
                   value={newFoodName}
                   onChangeText={setNewFoodName}
                 />
                 {/* <TextInput
-                style={styles.input}
+                style={mealsStyles.input}
                 placeholder="Calories (optional)"
                 placeholderTextColor="#475569"
                 value={newFoodCal}
                 onChangeText={setNewFoodCal}
                 keyboardType="numeric"
               /> */}
-                <Pressable style={styles.modalBtn} onPress={handleAddFood}>
+                <Pressable style={mealsStyles.modalBtn} onPress={handleAddFood}>
                   <LinearGradient
                     colors={["#7C3AED", "#3B82F6"]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
-                    style={styles.modalBtnGradient}
+                    style={mealsStyles.modalBtnGradient}
                   >
-                    <Text style={styles.modalBtnText}>Add Food</Text>
+                    <Text style={mealsStyles.modalBtnText}>Add Food</Text>
                   </LinearGradient>
                 </Pressable>
               </GlassCard>
@@ -690,31 +685,31 @@ export default function MealsScreen() {
         onRequestClose={closeMealModal}
       >
         <KeyboardAvoidingView
-          style={styles.modalOverlay}
+          style={mealsStyles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
         >
-          <Pressable style={styles.modalOverlay} onPress={closeMealModal}>
-            <Pressable style={styles.bigModalWrapper}>
+          <Pressable style={mealsStyles.modalOverlay} onPress={closeMealModal}>
+            <Pressable style={mealsStyles.bigModalWrapper}>
               <GlassCard
                 style={[
-                  styles.bigModalCard,
+                  mealsStyles.bigModalCard,
                   { paddingBottom: insets.bottom + 16 },
                 ]}
               >
                 <ScrollView showsVerticalScrollIndicator={false}>
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Schedule Meal</Text>
+                  <View style={mealsStyles.modalHeader}>
+                    <Text style={mealsStyles.modalTitle}>Schedule Meal</Text>
                     <Pressable
                       onPress={closeMealModal}
-                      style={styles.closeBtn}
+                      style={mealsStyles.closeBtn}
                       hitSlop={8}
                     >
                       <Ionicons name="close" size={20} color="#94A3B8" />
                     </Pressable>
                   </View>
                   <TextInput
-                    style={styles.input}
+                    style={mealsStyles.input}
                     placeholder="Meal name *"
                     placeholderTextColor="#475569"
                     value={newMealName}
@@ -729,22 +724,23 @@ export default function MealsScreen() {
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    style={styles.categoryScroll}
+                    style={mealsStyles.categoryScroll}
                   >
                     {ALL_CATEGORIES.map((cat) => (
                       <Pressable
                         key={cat}
                         onPress={() => setNewMealCategory(cat)}
                         style={[
-                          styles.categoryChip,
-                          newMealCategory === cat && styles.categoryChipActive,
+                          mealsStyles.categoryChip,
+                          newMealCategory === cat &&
+                            mealsStyles.categoryChipActive,
                         ]}
                       >
                         <Text
                           style={[
-                            styles.categoryChipText,
+                            mealsStyles.categoryChipText,
                             newMealCategory === cat &&
-                              styles.categoryChipTextActive,
+                              mealsStyles.categoryChipTextActive,
                           ]}
                         >
                           {MEAL_CATEGORY_LABELS[cat]}
@@ -767,8 +763,8 @@ export default function MealsScreen() {
 
                   <Pressable
                     style={[
-                      styles.modalBtn,
-                      !canAddMeal && styles.modalBtnDisabled,
+                      mealsStyles.modalBtn,
+                      !canAddMeal && mealsStyles.modalBtnDisabled,
                     ]}
                     onPress={handleAddMeal}
                     disabled={!canAddMeal}
@@ -781,7 +777,7 @@ export default function MealsScreen() {
                       }
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={styles.modalBtnGradient}
+                      style={mealsStyles.modalBtnGradient}
                     >
                       <Ionicons
                         name="rocket"
@@ -790,8 +786,8 @@ export default function MealsScreen() {
                       />
                       <Text
                         style={[
-                          styles.modalBtnText,
-                          !canAddMeal && styles.modalBtnTextDisabled,
+                          mealsStyles.modalBtnText,
+                          !canAddMeal && mealsStyles.modalBtnTextDisabled,
                         ]}
                       >
                         {!newMealName.trim()
@@ -817,23 +813,23 @@ export default function MealsScreen() {
         onRequestClose={closeEdit}
       >
         <KeyboardAvoidingView
-          style={styles.modalOverlay}
+          style={mealsStyles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
         >
-          <Pressable style={styles.modalOverlay} onPress={closeEdit}>
-            <Pressable style={styles.bigModalWrapper}>
+          <Pressable style={mealsStyles.modalOverlay} onPress={closeEdit}>
+            <Pressable style={mealsStyles.bigModalWrapper}>
               <GlassCard
                 style={[
-                  styles.bigModalCard,
+                  mealsStyles.bigModalCard,
                   { paddingBottom: insets.bottom + 16 },
                 ]}
               >
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Edit Meal</Text>
+                <View style={mealsStyles.modalHeader}>
+                  <Text style={mealsStyles.modalTitle}>Edit Meal</Text>
                   <Pressable
                     onPress={closeEdit}
-                    style={styles.closeBtn}
+                    style={mealsStyles.closeBtn}
                     hitSlop={8}
                   >
                     <Ionicons name="close" size={20} color="#94A3B8" />
@@ -841,7 +837,7 @@ export default function MealsScreen() {
                 </View>
 
                 <TextInput
-                  style={styles.input}
+                  style={mealsStyles.input}
                   placeholder="Meal name *"
                   placeholderTextColor="#475569"
                   value={editName}
@@ -851,21 +847,22 @@ export default function MealsScreen() {
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  style={styles.categoryScroll}
+                  style={mealsStyles.categoryScroll}
                 >
                   {ALL_CATEGORIES.map((cat) => (
                     <Pressable
                       key={cat}
                       onPress={() => setEditCategory(cat)}
                       style={[
-                        styles.categoryChip,
-                        editCategory === cat && styles.categoryChipActive,
+                        mealsStyles.categoryChip,
+                        editCategory === cat && mealsStyles.categoryChipActive,
                       ]}
                     >
                       <Text
                         style={[
-                          styles.categoryChipText,
-                          editCategory === cat && styles.categoryChipTextActive,
+                          mealsStyles.categoryChipText,
+                          editCategory === cat &&
+                            mealsStyles.categoryChipTextActive,
                         ]}
                       >
                         {MEAL_CATEGORY_LABELS[cat]}
@@ -888,8 +885,8 @@ export default function MealsScreen() {
 
                 <Pressable
                   style={[
-                    styles.modalBtn,
-                    !canSaveEdit && styles.modalBtnDisabled,
+                    mealsStyles.modalBtn,
+                    !canSaveEdit && mealsStyles.modalBtnDisabled,
                   ]}
                   onPress={saveEdit}
                   disabled={!canSaveEdit}
@@ -902,7 +899,7 @@ export default function MealsScreen() {
                     }
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
-                    style={styles.modalBtnGradient}
+                    style={mealsStyles.modalBtnGradient}
                   >
                     <Ionicons
                       name="checkmark"
@@ -911,8 +908,8 @@ export default function MealsScreen() {
                     />
                     <Text
                       style={[
-                        styles.modalBtnText,
-                        !canSaveEdit && styles.modalBtnTextDisabled,
+                        mealsStyles.modalBtnText,
+                        !canSaveEdit && mealsStyles.modalBtnTextDisabled,
                       ]}
                     >
                       Save Changes
@@ -933,30 +930,30 @@ export default function MealsScreen() {
         onRequestClose={closeSchedule}
       >
         <KeyboardAvoidingView
-          style={styles.modalOverlay}
+          style={mealsStyles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
         >
-          <Pressable style={styles.modalOverlay} onPress={closeSchedule}>
+          <Pressable style={mealsStyles.modalOverlay} onPress={closeSchedule}>
             <Pressable>
               <GlassCard
                 style={[
-                  styles.modalCard,
+                  mealsStyles.modalCard,
                   { paddingBottom: insets.bottom + 16 },
                 ]}
               >
-                <View style={styles.modalHeader}>
+                <View style={mealsStyles.modalHeader}>
                   <View>
-                    <Text style={styles.modalTitle}>Schedule</Text>
+                    <Text style={mealsStyles.modalTitle}>Schedule</Text>
                     {schedulingTemplate && (
-                      <Text style={styles.scheduleSubtitle}>
+                      <Text style={mealsStyles.scheduleSubtitle}>
                         {schedulingTemplate.name}
                       </Text>
                     )}
                   </View>
                   <Pressable
                     onPress={closeSchedule}
-                    style={styles.closeBtn}
+                    style={mealsStyles.closeBtn}
                     hitSlop={8}
                   >
                     <Ionicons name="close" size={20} color="#94A3B8" />
@@ -964,11 +961,11 @@ export default function MealsScreen() {
                 </View>
 
                 {/* Day picker */}
-                <Text style={styles.sectionLabel}>Day</Text>
+                <Text style={mealsStyles.sectionLabel}>Day</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  style={styles.dayScroll}
+                  style={mealsStyles.dayScroll}
                 >
                   {SCHEDULE_DAYS.map((d) => (
                     <Pressable
@@ -978,14 +975,15 @@ export default function MealsScreen() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       }}
                       style={[
-                        styles.dayChip,
-                        scheduleDate === d.value && styles.dayChipActive,
+                        mealsStyles.dayChip,
+                        scheduleDate === d.value && mealsStyles.dayChipActive,
                       ]}
                     >
                       <Text
                         style={[
-                          styles.dayChipText,
-                          scheduleDate === d.value && styles.dayChipTextActive,
+                          mealsStyles.dayChipText,
+                          scheduleDate === d.value &&
+                            mealsStyles.dayChipTextActive,
                         ]}
                       >
                         {d.label}
@@ -995,18 +993,23 @@ export default function MealsScreen() {
                 </ScrollView>
 
                 {/* Time picker */}
-                <Text style={styles.sectionLabel}>Time</Text>
+                <Text style={mealsStyles.sectionLabel}>Time</Text>
                 <TimePicker value={scheduleTime} onChange={setScheduleTime} />
 
-                <Pressable style={styles.modalBtn} onPress={confirmSchedule}>
+                <Pressable
+                  style={mealsStyles.modalBtn}
+                  onPress={confirmSchedule}
+                >
                   <LinearGradient
                     colors={["#7C3AED", "#3B82F6"]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
-                    style={styles.modalBtnGradient}
+                    style={mealsStyles.modalBtnGradient}
                   >
                     <Ionicons name="calendar" size={16} color="#FFF" />
-                    <Text style={styles.modalBtnText}>Add to Schedule</Text>
+                    <Text style={mealsStyles.modalBtnText}>
+                      Add to Schedule
+                    </Text>
                   </LinearGradient>
                 </Pressable>
               </GlassCard>
@@ -1044,17 +1047,17 @@ function FoodPickerSection({
   onToggle,
 }: FoodPickerSectionProps) {
   return (
-    <View style={styles.foodPickerSection}>
-      <View style={styles.foodPickerHeader}>
-        <Text style={styles.foodPickerLabel}>
+    <View style={mealsStyles.foodPickerSection}>
+      <View style={mealsStyles.foodPickerHeader}>
+        <Text style={mealsStyles.foodPickerLabel}>
           {label}
           {required && (
-            <Text style={styles.foodPickerRequired}> * required</Text>
+            <Text style={mealsStyles.foodPickerRequired}> * required</Text>
           )}
         </Text>
         {selectedIds.length > 0 && (
-          <View style={styles.selectedBadge}>
-            <Text style={styles.selectedBadgeText}>
+          <View style={mealsStyles.selectedBadge}>
+            <Text style={mealsStyles.selectedBadgeText}>
               {selectedIds.length} selected
             </Text>
           </View>
@@ -1065,25 +1068,25 @@ function FoodPickerSection({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.chipsScroll}
+          style={mealsStyles.chipsScroll}
         >
           {selectedIds.map((id) => (
             <Pressable
               key={id}
-              style={styles.selectedChip}
+              style={mealsStyles.selectedChip}
               onPress={() => onToggle(id)}
             >
-              <Text style={styles.selectedChipText}>{foodMap[id]}</Text>
+              <Text style={mealsStyles.selectedChipText}>{foodMap[id]}</Text>
               <Ionicons name="close-circle" size={14} color="#A78BFA" />
             </Pressable>
           ))}
         </ScrollView>
       )}
 
-      <View style={styles.pickerSearchBar}>
+      <View style={mealsStyles.pickerSearchBar}>
         <Ionicons name="search" size={14} color="#64748B" />
         <TextInput
-          style={styles.pickerSearchInput}
+          style={mealsStyles.pickerSearchInput}
           placeholder="Search your foods..."
           placeholderTextColor="#475569"
           value={search}
@@ -1092,15 +1095,15 @@ function FoodPickerSection({
       </View>
 
       {foods.length === 0 ? (
-        <View style={styles.pickerEmpty}>
+        <View style={mealsStyles.pickerEmpty}>
           <Ionicons name="nutrition-outline" size={28} color="#334155" />
-          <Text style={styles.pickerEmptyText}>
+          <Text style={mealsStyles.pickerEmptyText}>
             No foods yet — add some in the Foods tab first
           </Text>
         </View>
       ) : (
         <ScrollView
-          style={styles.pickerList}
+          style={mealsStyles.pickerList}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
         >
@@ -1110,14 +1113,14 @@ function FoodPickerSection({
               <Pressable
                 key={food.id}
                 style={[
-                  styles.pickerRow,
-                  isSelected && styles.pickerRowSelected,
+                  mealsStyles.pickerRow,
+                  isSelected && mealsStyles.pickerRowSelected,
                 ]}
                 onPress={() => onToggle(food.id)}
               >
                 <View
                   style={[
-                    styles.pickerFoodIcon,
+                    mealsStyles.pickerFoodIcon,
                     {
                       backgroundColor: isSelected
                         ? "rgba(124,58,237,0.2)"
@@ -1131,25 +1134,25 @@ function FoodPickerSection({
                     color={isSelected ? "#A78BFA" : "#475569"}
                   />
                 </View>
-                <View style={styles.pickerFoodInfo}>
+                <View style={mealsStyles.pickerFoodInfo}>
                   <Text
                     style={[
-                      styles.pickerFoodName,
-                      isSelected && styles.pickerFoodNameSelected,
+                      mealsStyles.pickerFoodName,
+                      isSelected && mealsStyles.pickerFoodNameSelected,
                     ]}
                   >
                     {food.name}
                   </Text>
                   {food.calories !== undefined && (
-                    <Text style={styles.pickerFoodMeta}>
+                    <Text style={mealsStyles.pickerFoodMeta}>
                       {food.calories} kcal
                     </Text>
                   )}
                 </View>
                 <View
                   style={[
-                    styles.checkCircle,
-                    isSelected && styles.checkCircleSelected,
+                    mealsStyles.checkCircle,
+                    isSelected && mealsStyles.checkCircleSelected,
                   ]}
                 >
                   {isSelected && (
@@ -1164,307 +1167,3 @@ function FoodPickerSection({
     </View>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#030712" },
-  scroll: { paddingHorizontal: 16 },
-  header: { marginBottom: 16 },
-  title: { color: "#F8FAFC", fontSize: 28, fontWeight: "800" },
-  subtitle: { color: "#64748B", fontSize: 14, marginTop: 4 },
-  tabBarWrapper: { backgroundColor: "transparent", paddingBottom: 12 },
-  tabBar: { flexDirection: "row", padding: 4 },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  activeTab: {},
-  tabText: { color: "#64748B", fontSize: 13, fontWeight: "600" },
-  activeTabText: { color: "#FFFFFF" },
-  // Foods tab
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 12,
-  },
-  searchInput: { flex: 1, color: "#F8FAFC", fontSize: 15 },
-  empty: { alignItems: "center", paddingVertical: 60, gap: 12 },
-  emptyTitle: { color: "#94A3B8", fontSize: 18, fontWeight: "600" },
-  emptyText: {
-    color: "#475569",
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  foodCard: { padding: 14, marginBottom: 8 },
-  foodRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  foodIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  foodInfo: { flex: 1 },
-  foodName: { color: "#F8FAFC", fontSize: 15, fontWeight: "600" },
-  foodMacros: { color: "#64748B", fontSize: 12, marginTop: 2 },
-  foodActions: { flexDirection: "row", gap: 4 },
-  foodActionBtn: { padding: 8 },
-  // Meals library cards
-  tplCard: { padding: 14, marginBottom: 10 },
-  tplHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 10,
-  },
-  tplIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "rgba(124,58,237,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tplInfo: { flex: 1 },
-  tplName: { color: "#F8FAFC", fontSize: 15, fontWeight: "700" },
-  tplMeta: { color: "#64748B", fontSize: 12, marginTop: 2 },
-  tplFoodScroll: { marginBottom: 12 },
-  tplFoodChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 6,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-  },
-  tplFoodChipText: { color: "#94A3B8", fontSize: 12, fontWeight: "500" },
-  tplActions: { flexDirection: "row", gap: 8 },
-  tplEditBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-  },
-  tplEditBtnText: { color: "#94A3B8", fontSize: 13, fontWeight: "600" },
-  tplScheduleBtn: { flex: 2, borderRadius: 12, overflow: "hidden" },
-  tplScheduleGrad: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-  },
-  tplScheduleBtnText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
-  // Modals
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
-  modalCard: { margin: 16, padding: 24, borderRadius: 24 },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  modalTitle: { color: "#F8FAFC", fontSize: 22, fontWeight: "800" },
-  scheduleSubtitle: {
-    color: "#A78BFA",
-    fontSize: 13,
-    fontWeight: "500",
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  input: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: "#F8FAFC",
-    fontSize: 15,
-    marginBottom: 12,
-  },
-  categoryScroll: { marginBottom: 16 },
-  categoryChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-  },
-  categoryChipActive: {
-    backgroundColor: "rgba(124,58,237,0.25)",
-    borderColor: "#7C3AED",
-  },
-  categoryChipText: { color: "#64748B", fontSize: 13, fontWeight: "500" },
-  categoryChipTextActive: { color: "#A78BFA", fontWeight: "600" },
-  sectionLabel: {
-    color: "#94A3B8",
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 8,
-  },
-  // Day chips (schedule modal)
-  dayScroll: { marginBottom: 16 },
-  dayChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginRight: 8,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-  },
-  dayChipActive: {
-    backgroundColor: "rgba(124,58,237,0.25)",
-    borderColor: "#7C3AED",
-  },
-  dayChipText: { color: "#64748B", fontSize: 13, fontWeight: "500" },
-  dayChipTextActive: { color: "#A78BFA", fontWeight: "600" },
-  // Big modals (food picker inside)
-  bigModalWrapper: { flex: 1, justifyContent: "flex-end" },
-  bigModalCard: { margin: 16, padding: 24, borderRadius: 24, maxHeight: "90%" },
-  modalBtn: { borderRadius: 14, overflow: "hidden", marginTop: 16 },
-  modalBtnDisabled: { opacity: 0.7 },
-  modalBtnGradient: {
-    paddingVertical: 16,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-  },
-  modalBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
-  modalBtnTextDisabled: { color: "#475569" },
-  // Food picker (shared)
-  foodPickerSection: { marginBottom: 4 },
-  foodPickerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  foodPickerLabel: {
-    color: "#94A3B8",
-    fontSize: 13,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  foodPickerRequired: {
-    color: "#EF4444",
-    fontSize: 11,
-    fontWeight: "500",
-    textTransform: "none",
-    letterSpacing: 0,
-  },
-  selectedBadge: {
-    backgroundColor: "rgba(124,58,237,0.2)",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: "rgba(124,58,237,0.4)",
-  },
-  selectedBadgeText: { color: "#A78BFA", fontSize: 12, fontWeight: "600" },
-  chipsScroll: { marginBottom: 10 },
-  selectedChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(124,58,237,0.2)",
-    borderWidth: 1,
-    borderColor: "rgba(124,58,237,0.4)",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 8,
-  },
-  selectedChipText: { color: "#A78BFA", fontSize: 13, fontWeight: "500" },
-  pickerSearchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 8,
-  },
-  pickerSearchInput: { flex: 1, color: "#F8FAFC", fontSize: 13 },
-  pickerList: { maxHeight: 180 },
-  pickerEmpty: { alignItems: "center", paddingVertical: 24, gap: 8 },
-  pickerEmptyText: {
-    color: "#475569",
-    fontSize: 13,
-    textAlign: "center",
-    lineHeight: 18,
-  },
-  pickerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginBottom: 4,
-    backgroundColor: "rgba(255,255,255,0.03)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
-  },
-  pickerRowSelected: {
-    backgroundColor: "rgba(124,58,237,0.12)",
-    borderColor: "rgba(124,58,237,0.35)",
-  },
-  pickerFoodIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pickerFoodInfo: { flex: 1 },
-  pickerFoodName: { color: "#94A3B8", fontSize: 14, fontWeight: "500" },
-  pickerFoodNameSelected: { color: "#F8FAFC", fontWeight: "600" },
-  pickerFoodMeta: { color: "#475569", fontSize: 11, marginTop: 1 },
-  checkCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkCircleSelected: { backgroundColor: "#7C3AED", borderColor: "#7C3AED" },
-});
