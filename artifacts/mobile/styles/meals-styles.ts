@@ -1,3 +1,4 @@
+import { relative } from "node:path";
 import { StyleSheet } from "react-native";
 
 export const mealsStyles = StyleSheet.create({
@@ -185,7 +186,12 @@ export const mealsStyles = StyleSheet.create({
   dayChipTextActive: { color: "#A78BFA", fontWeight: "600" },
   // Big modals (food picker inside)
   bigModalWrapper: { flex: 1, justifyContent: "flex-end" },
-  bigModalCard: { margin: 16, padding: 24, borderRadius: 24, maxHeight: "90%" },
+  bigModalCard: {
+    margin: 16,
+    padding: 24,
+    borderRadius: 24,
+    maxHeight: "90%",
+  },
   modalBtn: { borderRadius: 14, overflow: "hidden", marginTop: 16 },
   modalBtnDisabled: { opacity: 0.7 },
   modalBtnGradient: {

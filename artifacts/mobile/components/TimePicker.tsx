@@ -72,6 +72,7 @@ function Wheel({ items, selectedIndex, onChange, width = 64 }: WheelProps) {
 
   const handleScroll = useCallback(
     (e: { nativeEvent: { contentOffset: { y: number } } }) => {
+      console.log("handleScroll", e.nativeEvent.contentOffset.y);
       const y = e.nativeEvent.contentOffset.y;
       const idx = Math.round(y / ITEM_H);
       const clamped = Math.max(0, Math.min(idx, items.length - 1));
@@ -93,7 +94,7 @@ function Wheel({ items, selectedIndex, onChange, width = 64 }: WheelProps) {
         ref={scrollRef}
         style={{ height: ITEM_H * VISIBLE }}
         showsVerticalScrollIndicator={false}
-        nestedScrollEnabled
+        nestedScrollEnabled={true}
         snapToInterval={ITEM_H}
         snapToAlignment="center"
         decelerationRate="fast"
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   wheelOuter: {
-    height: ITEM_H * VISIBLE,
+    height: ITEM_H * 3,
     overflow: "hidden",
     position: "relative",
   },

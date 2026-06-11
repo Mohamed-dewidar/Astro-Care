@@ -200,7 +200,6 @@ export default function MealsScreen() {
     setNewMealCategory("breakfast");
     setSelectedFoodIds([]);
     setFoodPickerSearch("");
-    console.log("closeMealModal", fabRef.current);
     fabRef.current?.close();
   };
 
@@ -683,19 +682,20 @@ export default function MealsScreen() {
         transparent
         animationType="slide"
         onRequestClose={closeMealModal}
+        statusBarTranslucent
       >
-        <KeyboardAvoidingView
-          style={mealsStyles.modalOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
-        >
-          <Pressable style={mealsStyles.modalOverlay} onPress={closeMealModal}>
-            <Pressable style={mealsStyles.bigModalWrapper}>
-              <GlassCard
-                style={[
-                  mealsStyles.bigModalCard,
-                  { paddingBottom: insets.bottom + 16 },
-                ]}
+        <View style={mealsStyles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeMealModal} />
+          <View style={mealsStyles.bigModalWrapper}>
+            <GlassCard
+              style={[
+                mealsStyles.bigModalCard,
+                { paddingBottom: insets.bottom + 16 },
+              ]}
+            >
+              <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
               >
                 <ScrollView showsVerticalScrollIndicator={false}>
                   <View style={mealsStyles.modalHeader}>
@@ -799,10 +799,10 @@ export default function MealsScreen() {
                     </LinearGradient>
                   </Pressable>
                 </ScrollView>
-              </GlassCard>
-            </Pressable>
-          </Pressable>
-        </KeyboardAvoidingView>
+              </KeyboardAvoidingView>
+            </GlassCard>
+          </View>
+        </View>
       </Modal>
 
       {/* ════ Edit Template Modal ════ */}
