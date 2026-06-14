@@ -9,6 +9,7 @@ import type {
   MealCategory,
   MealTemplate,
   Medication,
+  MedicationTemplate,
   ScheduledMeal,
 } from "@/types";
 
@@ -91,6 +92,20 @@ export function initDatabase(): void {
       items       TEXT    NOT NULL DEFAULT '[]',
       color_tag   TEXT,
       is_favorite INTEGER NOT NULL DEFAULT 0
+    )`,
+  );
+
+  db.execSync(
+    `CREATE TABLE IF NOT EXISTS medication_templates (
+      id               TEXT PRIMARY KEY,
+      name             TEXT    NOT NULL,
+      link_to_category TEXT    NOT NULL,
+      relation_type    TEXT    NOT NULL,
+      dosage           TEXT,
+      quantity         TEXT,
+      image            TEXT,
+      notes            TEXT,
+      minutes_offset   INTEGER NOT NULL DEFAULT 30
     )`,
   );
 
@@ -373,6 +388,77 @@ export function dbInsertMealTemplate(t: MealTemplate): void {
 
 export function dbDeleteMealTemplate(id: string): void {
   getDb().runSync("DELETE FROM meal_templates WHERE id = ?", [id]);
+}
+
+// ─── Medication Templates ──────────────────────────────────────────────────
+
+type MedicationTemplateRow = {
+  id: string;
+  name: string;
+  link_to_category: string;
+  relation_type: string;
+  dosage: string | null;
+  quantity: string | null;
+  image: string | null;
+  notes: string | null;
+  minutes_offset: number;
+};
+
+function rowToMedicationTemplate(r: MedicationTemplateRow): MedicationTemplate {
+  return {
+    id: r.id,
+    name: r.name,
+    linkToCategory: isMealCategory(r.link_to_category)
+      ? r.link_to_category
+      : (Object.keys(MEAL_CATEGORY_LABELS)[0] as MealCategory),
+    relationType: r.relation_type as MedicationTemplate["relationType"],
+    dosage: r.dosage ?? undefined,
+    quantity: r.quantity ?? undefined,
+    image: r.image ?? undefined,
+    notes: r.notes ?? undefined,
+    minutesOffset: r.minutes_offset,
+  };
+}
+
+export function dbGetMedicationTemplates(): MedicationTemplate[] {
+  return getDb()
+    .getAllSync<MedicationTemplateRow>(
+      "SELECT * FROM medication_templates ORDER BY name",
+      [],
+    )
+    .map(rowToMedicationTemplate);
+}
+
+export function dbInsertMedicationTemplate(t: MedicationTemplate): void {
+  getDb().runSync(
+    `INSERT OR REPLACE INTO medication_templates
+       (id, name, link_to_category, relation_type, dosage, quantity, image, notes, minutes_offset)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      t.id,
+      t.name,
+      t.linkToCategory,
+      t.relationType,
+      t.dosage ?? null,
+      t.quantity ?? null,
+      t.image ?? null,
+      t.notes ?? null,
+      t.minutesOffset,
+    ],
+  );
+}
+
+export function dbDeleteMedicationTemplate(id: string): void {
+  getDb().runSync("DELETE FROM medication_templates WHERE id = ?", [id]);
+}
+
+export function dbSetMedicationTemplates(
+  templates: MedicationTemplate[],
+): void {
+  getDb().execSync("DELETE FROM medication_templates");
+  for (const template of templates) {
+    dbInsertMedicationTemplate(template);
+  }
 }
 
 // ─── Day Templates ─────────────────────────────────────────────────────────
