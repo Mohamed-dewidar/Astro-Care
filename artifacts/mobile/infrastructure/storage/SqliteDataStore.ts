@@ -32,7 +32,7 @@ import type {
   ScheduledMeal,
 } from "@/types";
 
-import type { DataStore } from "./AppDataStore";
+import type { DataStore } from "./DataStoreTypes";
 
 class SqliteDataStore implements DataStore {
   async init(): Promise<void> {

@@ -10,7 +10,7 @@ import type {
   ScheduledMeal,
 } from "@/types";
 
-import type { DataStore } from "./AppDataStore";
+import type { DataStore } from "./DataStoreTypes";
 
 const KEYS = {
   foods: "foods",

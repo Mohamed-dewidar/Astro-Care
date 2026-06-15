@@ -40,6 +40,7 @@ import type {
   Timeline,
 } from "@/types";
 import { computeMedicationTime, getTodayString, uid } from "@/utils/dateUtils";
+import { dataStoreRegistry, SqliteDataStore } from "@/infrastructure/storage";
 
 // ─── Seed data ─────────────────────────────────────────────────────────────
 
