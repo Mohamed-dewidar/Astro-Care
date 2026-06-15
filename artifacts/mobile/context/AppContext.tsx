@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, {
   createContext,
   useCallback,
@@ -7,28 +6,6 @@ import React, {
   useState,
 } from "react";
 
-import {
-  dbDeleteFood,
-  dbDeleteMeal,
-  dbDeleteMedication,
-  dbDeleteMealTemplate,
-  dbDeleteDayTemplate,
-  dbGetAchievements,
-  dbGetDayTemplates,
-  dbGetFoods,
-  dbGetMealTemplates,
-  dbGetMeals,
-  dbGetMedications,
-  dbGetSetting,
-  dbInsertFood,
-  dbInsertMeal,
-  dbInsertMealTemplate,
-  dbInsertMedication,
-  dbInsertDayTemplate,
-  dbSetSetting,
-  dbUpsertAchievement,
-  initDatabase,
-} from "@/db/database";
 import type {
   Achievement,
   DayTemplate,
@@ -39,8 +16,12 @@ import type {
   ScheduledMeal,
   Timeline,
 } from "@/types";
+import {
+  AsyncStorageDataStore,
+  dataStoreRegistry,
+  SqliteDataStore,
+} from "@/infrastructure/storage";
 import { computeMedicationTime, getTodayString, uid } from "@/utils/dateUtils";
-import { dataStoreRegistry, SqliteDataStore } from "@/infrastructure/storage";
 
 // ─── Seed data ─────────────────────────────────────────────────────────────
 
@@ -389,19 +370,15 @@ interface AppContextType {
   timelines: Timeline[];
 }
 
+// ── Data store ─────────────────────────────────────────────────────────────
+dataStoreRegistry
+  .register("sqlite", () => new SqliteDataStore())
+  .register("async-storage", () => new AsyncStorageDataStore());
+
+const dataStore = dataStoreRegistry.get("async-storage");
+
 const AppContext = createContext<AppContextType | null>(null);
-
 // ─── Provider ──────────────────────────────────────────────────────────────
-
-const USE_SQLITE = false;
-
-function persistAsyncArray(key: string, value: unknown[]) {
-  if (value.length === 0) {
-    AsyncStorage.removeItem(key);
-    return;
-  }
-  AsyncStorage.setItem(key, JSON.stringify(value));
-}
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [onboardingComplete, setOnboardingComplete] = useState(false);
@@ -421,120 +398,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [timelines, setTimelines] = useState<Timeline[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  // ── Bootstrap (load from SQLite or AsyncStorage) ────────────────────────
+  // ── Bootstrap ───────────────────────────────────────────────────────────
 
   useEffect(() => {
     (async () => {
       try {
+        await dataStore.init();
         const today = getTodayString();
 
-        if (USE_SQLITE) {
-          // ── Native: SQLite ──────────────────────────────────────────────
-          initDatabase();
-
-          // Foods
-          const existingFoods = dbGetFoods();
-          if (existingFoods.length === 0) {
-            SEED_FOODS.forEach((f) => dbInsertFood(f));
-            setFoods(SEED_FOODS);
-          } else {
-            setFoods(existingFoods);
+        let loadedFoods = await dataStore.getFoods();
+        if (loadedFoods.length === 0) {
+          for (const food of SEED_FOODS) {
+            await dataStore.upsertFood(food);
           }
+          loadedFoods = SEED_FOODS;
+        }
+        setFoods(loadedFoods);
 
-          // Meals — seed today if missing
-          const existingMeals = dbGetMeals();
-          const hasToday = existingMeals.some((m) => m.date === today);
-          let mealsToLoad = existingMeals;
-          if (!hasToday) {
-            const seeded = buildTodayMeals();
-            seeded.forEach((m) => dbInsertMeal(m));
-            mealsToLoad = [...existingMeals, ...seeded];
+        let loadedMeals = await dataStore.getMeals();
+        if (!loadedMeals.some((meal) => meal.date === today)) {
+          const seeded = buildTodayMeals();
+          await dataStore.upsertMeals(seeded);
+          loadedMeals = [...loadedMeals, ...seeded];
+        }
+        setAllMeals(loadedMeals);
+
+        const loadedMedTemplates = await dataStore.getMedicationTemplates();
+        setMedicationTemplates(loadedMedTemplates);
+
+        let loadedMeds = await dataStore.getMedications();
+        if (!loadedMeds.some((med) => med.date === today)) {
+          const todayMeals = loadedMeals.filter((meal) => meal.date === today);
+          const seeded =
+            loadedMedTemplates.length > 0
+              ? buildTodayMedsFromTemplates(
+                  todayMeals,
+                  loadedMedTemplates,
+                  today,
+                )
+              : buildTodayMeds(todayMeals);
+          await dataStore.upsertMedications(seeded);
+          loadedMeds = [...loadedMeds, ...seeded];
+        }
+        setMedications(loadedMeds);
+
+        setMealTemplates(await dataStore.getMealTemplates());
+        setDayTemplates(await dataStore.getDayTemplates());
+
+        let loadedAchievements = await dataStore.getAchievements();
+        if (loadedAchievements.length === 0) {
+          for (const achievement of INITIAL_ACHIEVEMENTS) {
+            await dataStore.upsertAchievement(achievement);
           }
-          setAllMeals(mealsToLoad);
+          loadedAchievements = INITIAL_ACHIEVEMENTS;
+        }
+        setAchievements(loadedAchievements);
 
-          // Medications — seed today if missing
-          const existingMeds = dbGetMedications();
-          const hasTodayMed = existingMeds.some((m) => m.date === today);
-          let medsToLoad = existingMeds;
-          if (!hasTodayMed) {
-            const seeded = buildTodayMeds(
-              mealsToLoad.filter((m) => m.date === today),
-            );
-            seeded.forEach((m) => dbInsertMedication(m));
-            medsToLoad = [...existingMeds, ...seeded];
-          }
-          setMedications(medsToLoad);
-
-          // Templates
-          setMealTemplates(dbGetMealTemplates());
-          setDayTemplates(dbGetDayTemplates());
-          const rawMedicationTemplates = await AsyncStorage.getItem(
-            "medicationTemplates",
-          );
-          if (rawMedicationTemplates) {
-            setMedicationTemplates(JSON.parse(rawMedicationTemplates));
-          } else {
-            setMedicationTemplates([]);
-          }
-
-          // Achievements
-          const dbAch = dbGetAchievements();
-          if (dbAch.length === 0) {
-            INITIAL_ACHIEVEMENTS.forEach((a) => dbUpsertAchievement(a));
-            setAchievements(INITIAL_ACHIEVEMENTS);
-          } else {
-            setAchievements(dbAch);
-          }
-
-          // Settings
-          if (dbGetSetting("onboarding") === "true")
-            setOnboardingComplete(true);
-        } else {
-          // ── Web: AsyncStorage fallback ──────────────────────────────────
-          const [ob, f, m, med, mt, dt, ach] = await Promise.all([
-            AsyncStorage.getItem("onboarding"),
-            AsyncStorage.getItem("foods"),
-            AsyncStorage.getItem("meals"),
-            AsyncStorage.getItem("medications"),
-            AsyncStorage.getItem("mealTemplates"),
-            AsyncStorage.getItem("dayTemplates"),
-            AsyncStorage.getItem("achievements"),
-          ]);
-
-          const parsedFoods: Food[] = f ? JSON.parse(f) : [];
-          setFoods(parsedFoods);
-
-          const loadedMeals: ScheduledMeal[] = m ? JSON.parse(m) : [];
-          setAllMeals(loadedMeals);
-
-          const rawTemplates = await AsyncStorage.getItem(
-            "medicationTemplates",
-          );
-          const parsedTemplates: MedicationTemplate[] = rawTemplates
-            ? JSON.parse(rawTemplates)
-            : [];
-          setMedicationTemplates(parsedTemplates);
-
-          let loadedMeds: Medication[] = med ? JSON.parse(med) : [];
-          const hasTodayMed = loadedMeds.some((item) => item.date === today);
-          if (!hasTodayMed) {
-            const seeded = buildTodayMedsFromTemplates(
-              loadedMeals,
-              parsedTemplates,
-              today,
-            );
-
-            loadedMeds = [...loadedMeds, ...seeded];
-          }
-          setMedications(loadedMeds);
-
-          if (mt) setMealTemplates(JSON.parse(mt));
-          else setMealTemplates([]);
-          if (dt) setDayTemplates(JSON.parse(dt));
-          else setDayTemplates([]);
-          if (ach) setAchievements(JSON.parse(ach));
-          else setAchievements([]);
-          if (ob === "true") setOnboardingComplete(true);
+        if ((await dataStore.getSetting("onboarding")) === "true") {
+          setOnboardingComplete(true);
         }
       } catch (_) {
       } finally {
@@ -542,34 +463,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     })();
   }, []);
-
-  // ── AsyncStorage persistence ─────────────────────────────────────────────
-  useEffect(() => {
-    if (!loaded || USE_SQLITE) return;
-    persistAsyncArray("foods", foods);
-  }, [foods, loaded]);
-
-  useEffect(() => {
-    if (!loaded || USE_SQLITE) return;
-    persistAsyncArray("meals", allMeals);
-  }, [allMeals, loaded]);
-
-  useEffect(() => {
-    if (!loaded || USE_SQLITE) return;
-    persistAsyncArray("medications", medications);
-  }, [medications, loaded]);
-
-  useEffect(() => {
-    if (!loaded || USE_SQLITE) return;
-    persistAsyncArray("medicationTemplates", medicationTemplates);
-  }, [medicationTemplates, loaded]);
-
-  useEffect(() => {
-    if (!loaded || USE_SQLITE) return;
-    persistAsyncArray("mealTemplates", mealTemplates);
-    persistAsyncArray("dayTemplates", dayTemplates);
-    persistAsyncArray("achievements", achievements);
-  }, [mealTemplates, dayTemplates, achievements, loaded]);
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const today = getTodayString();
@@ -628,9 +521,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Onboarding ───────────────────────────────────────────────────────────
   const completeOnboarding = useCallback(() => {
+    void dataStore.setSetting("onboarding", "true");
     setOnboardingComplete(true);
-    if (USE_SQLITE) dbSetSetting("onboarding", "true");
-    else AsyncStorage.setItem("onboarding", "true");
   }, []);
 
   // ── Streak processing ───────────────────────────────────────────────────
@@ -655,9 +547,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             ? Math.round(((mealsCompleted + medsCompleted) / totalEvents) * 100)
             : 0;
 
-        const raw = USE_SQLITE
-          ? dbGetSetting("streakState")
-          : await AsyncStorage.getItem("streakState");
+        const raw = await dataStore.getSetting("streakState");
         const parsed = raw
           ? JSON.parse(raw)
           : { current: 0, lastDate: null, increased: false };
@@ -685,8 +575,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
 
         const encoded = JSON.stringify(parsed);
-        if (USE_SQLITE) dbSetSetting("streakState", encoded);
-        else await AsyncStorage.setItem("streakState", encoded);
+        await dataStore.setSetting("streakState", encoded);
         setLastStreakDate(today);
       } catch (_) {
         // ignore
@@ -697,24 +586,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Foods ─────────────────────────────────────────────────────────────────
   const addFood = useCallback((food: Omit<Food, "id">) => {
     const newFood: Food = { ...food, id: uid() };
-    if (USE_SQLITE) dbInsertFood(newFood);
+    void dataStore.upsertFood(newFood);
     setFoods((prev) => [...prev, newFood]);
   }, []);
 
   const updateFood = useCallback((id: string, patch: Partial<Food>) => {
     setFoods((prev) => {
-      const updated = prev.map((f) => (f.id === id ? { ...f, ...patch } : f));
-      if (USE_SQLITE) {
-        const food = updated.find((f) => f.id === id);
-        if (food) dbInsertFood(food);
-      }
-      return updated;
+      const food = prev.find((entry) => entry.id === id);
+      if (!food) return prev;
+      const updated = { ...food, ...patch };
+      void dataStore.upsertFood(updated);
+      return prev.map((entry) => (entry.id === id ? updated : entry));
     });
   }, []);
 
   const deleteFood = useCallback((id: string) => {
-    if (USE_SQLITE) dbDeleteFood(id);
-    setFoods((prev) => prev.filter((f) => f.id !== id));
+    void dataStore.deleteFood(id);
+    setFoods((prev) => prev.filter((entry) => entry.id !== id));
 
     setMealTemplates((prev) => {
       const nextTemplates: MealTemplate[] = [];
@@ -727,12 +615,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const updatedItems = meal.items.filter((item) => item.foodId !== id);
 
         if (!updatedItems.length) {
-          if (USE_SQLITE) dbDeleteMealTemplate(meal.id);
+          void dataStore.deleteMealTemplate(meal.id);
           return;
         }
 
         const updatedMeal = { ...meal, items: updatedItems };
-        if (USE_SQLITE) dbInsertMealTemplate(updatedMeal);
+        void dataStore.upsertMealTemplate(updatedMeal);
         nextTemplates.push(updatedMeal);
       });
       return nextTemplates;
@@ -741,84 +629,90 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const toggleFavoriteFood = useCallback((id: string) => {
     setFoods((prev) => {
-      const updated = prev.map((f) =>
-        f.id === id ? { ...f, isFavorite: !f.isFavorite } : f,
-      );
-      if (USE_SQLITE) {
-        const food = updated.find((f) => f.id === id);
-        if (food) dbInsertFood(food);
-      }
-      return updated;
+      const food = prev.find((entry) => entry.id === id);
+      if (!food) return prev;
+      const updated = { ...food, isFavorite: !food.isFavorite };
+      void dataStore.upsertFood(updated);
+      return prev.map((entry) => (entry.id === id ? updated : entry));
     });
   }, []);
 
   // ── Meals ─────────────────────────────────────────────────────────────────
   const addMeal = useCallback((meal: Omit<ScheduledMeal, "id">) => {
     const newMeal: ScheduledMeal = { ...meal, id: uid() };
-    if (USE_SQLITE) dbInsertMeal(newMeal);
+    void dataStore.upsertMeal(newMeal);
     setAllMeals((prev) => [...prev, newMeal]);
   }, []);
 
   const updateMeal = useCallback(
     (id: string, patch: Partial<ScheduledMeal>) => {
       setAllMeals((prev) => {
-        const updated = prev.map((m) => (m.id === id ? { ...m, ...patch } : m));
-        if (USE_SQLITE) {
-          const meal = updated.find((m) => m.id === id);
-          if (meal) dbInsertMeal(meal);
-        }
-        return updated;
+        const meal = prev.find((entry) => entry.id === id);
+        if (!meal) return prev;
+        const updated = { ...meal, ...patch };
+        void dataStore.upsertMeal(updated);
+        return prev.map((entry) => (entry.id === id ? updated : entry));
       });
     },
     [],
   );
 
   const deleteMeal = useCallback((id: string) => {
-    if (USE_SQLITE) dbDeleteMeal(id);
-    setAllMeals((prev) => prev.filter((m) => m.id !== id));
+    void dataStore.deleteMeal(id);
+    setAllMeals((prev) => prev.filter((entry) => entry.id !== id));
   }, []);
 
   const completeMeal = useCallback(
     (id: string) => {
       const completedAt = new Date().toISOString();
-      const completedMeal = allMeals.find((m) => m.id === id);
-      setAllMeals((prev) => {
-        const updated = prev.map((m) =>
-          m.id === id ? { ...m, completedAt, skipped: false } : m,
-        );
-        if (USE_SQLITE) {
-          const meal = updated.find((m) => m.id === id);
-          if (meal) dbInsertMeal(meal);
-        }
-        return updated;
-      });
+      const completedMeal = allMeals.find((meal) => meal.id === id);
       if (!completedMeal) return;
+
+      const updatedMeal = {
+        ...completedMeal,
+        completedAt,
+        skipped: false,
+      };
+      void dataStore.upsertMeal(updatedMeal);
+
+      const now = new Date(completedAt);
+      const actualTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+      setAllMeals((prev) =>
+        prev.map((meal) => (meal.id === id ? updatedMeal : meal)),
+      );
+
       setMedications((prev) => {
-        const now = new Date(completedAt);
-        const actualTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
         const updated = prev.map((med) => {
           if (med.linkToCategory !== completedMeal.category) return med;
-          const newTime = computeMedicationTime(
-            actualTime,
-            med.relationType,
-            med.minutesOffset,
-          );
-          const next = { ...med, computedTime: newTime };
-          if (USE_SQLITE) dbInsertMedication(next);
+          const next = {
+            ...med,
+            computedTime: computeMedicationTime(
+              actualTime,
+              med.relationType,
+              med.minutesOffset,
+            ),
+          };
+          void dataStore.upsertMedication(next);
           return next;
         });
         return updated;
       });
+
       setAchievements((prev) => {
-        const updated = prev.map((a) =>
-          a.id === "first-mission" && !a.unlocked
-            ? { ...a, unlocked: true, unlockedAt: new Date().toISOString() }
-            : a,
+        const updated = prev.map((achievement) =>
+          achievement.id === "first-mission" && !achievement.unlocked
+            ? {
+                ...achievement,
+                unlocked: true,
+                unlockedAt: new Date().toISOString(),
+              }
+            : achievement,
         );
-        if (USE_SQLITE) {
-          const ach = updated.find((a) => a.id === "first-mission");
-          if (ach) dbUpsertAchievement(ach);
-        }
+        const firstMission = updated.find(
+          (achievement) => achievement.id === "first-mission",
+        );
+        if (firstMission) void dataStore.upsertAchievement(firstMission);
         return updated;
       });
     },
@@ -827,14 +721,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const skipMeal = useCallback((id: string) => {
     setAllMeals((prev) => {
-      const updated = prev.map((m) =>
-        m.id === id ? { ...m, skipped: true, completedAt: undefined } : m,
-      );
-      if (USE_SQLITE) {
-        const meal = updated.find((m) => m.id === id);
-        if (meal) dbInsertMeal(meal);
-      }
-      return updated;
+      const meal = prev.find((entry) => entry.id === id);
+      if (!meal) return prev;
+      const updated = {
+        ...meal,
+        skipped: true,
+        completedAt: undefined,
+      };
+      void dataStore.upsertMeal(updated);
+      return prev.map((entry) => (entry.id === id ? updated : entry));
     });
   }, []);
 
@@ -842,11 +737,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addMedicationTemplate = useCallback(
     (med: Omit<MedicationTemplate, "id">) => {
       const newTemplate: MedicationTemplate = { ...med, id: uid() };
-      setMedicationTemplates((prev) => [...prev, newTemplate]);
+      setMedicationTemplates((prev) => {
+        const next = [...prev, newTemplate];
+        void dataStore.setMedicationTemplates(next);
+        return next;
+      });
 
       const today = getTodayString();
       const linkedMeal = allMeals.find(
-        (m) => m.date === today && m.category === med.linkToCategory,
+        (meal) => meal.date === today && meal.category === med.linkToCategory,
       );
       const computedTime = linkedMeal
         ? computeMedicationTime(
@@ -864,7 +763,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         skipped: false,
         date: today,
       };
-      if (USE_SQLITE) dbInsertMedication(todayMed);
+      void dataStore.upsertMedication(todayMed);
       setMedications((prev) => [...prev, todayMed]);
     },
     [allMeals],
@@ -878,30 +777,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateMedicationTemplate = useCallback(
     (id: string, patch: Partial<MedicationTemplate>) => {
       setMedicationTemplates((prev) => {
-        const updated = prev.map((m) => (m.id === id ? { ...m, ...patch } : m));
-        return updated;
+        const next = prev.map((template) =>
+          template.id === id ? { ...template, ...patch } : template,
+        );
+        void dataStore.setMedicationTemplates(next);
+        return next;
       });
+
       setMedications((prev) => {
         const today = getTodayString();
-        return prev.map((m) => {
-          if (m.templateId !== id || m.date !== today) return m;
+        return prev.map((med) => {
+          if (med.templateId !== id || med.date !== today) return med;
           const linkedMeal = allMeals.find(
             (meal) =>
               meal.date === today &&
-              meal.category === (patch.linkToCategory ?? m.linkToCategory),
+              meal.category === (patch.linkToCategory ?? med.linkToCategory),
           );
           const updatedMed = {
-            ...m,
+            ...med,
             ...patch,
             computedTime: linkedMeal
               ? computeMedicationTime(
                   linkedMeal.scheduledTime,
-                  patch.relationType ?? m.relationType,
-                  patch.minutesOffset ?? m.minutesOffset,
+                  patch.relationType ?? med.relationType,
+                  patch.minutesOffset ?? med.minutesOffset,
                 )
               : undefined,
           };
-          if (USE_SQLITE) dbInsertMedication(updatedMed);
+          void dataStore.upsertMedication(updatedMed);
           return updatedMed;
         });
       });
@@ -910,114 +813,116 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const deleteMedicationTemplate = useCallback((id: string) => {
-    setMedicationTemplates((prev) => prev.filter((m) => m.id !== id));
+    setMedicationTemplates((prev) => {
+      const next = prev.filter((template) => template.id !== id);
+      void dataStore.setMedicationTemplates(next);
+      return next;
+    });
     setMedications((prev) => {
-      const existing = prev.filter((m) => m.templateId === id);
-      if (USE_SQLITE) {
-        existing.forEach((med) => dbDeleteMedication(med.id));
-      }
-      return prev.filter((m) => m.templateId !== id);
+      const toDelete = prev.filter((med) => med.templateId === id);
+      toDelete.forEach((med) => void dataStore.deleteMedication(med.id));
+      return prev.filter((med) => med.templateId !== id);
     });
   }, []);
 
   const updateMedication = useCallback(
     (id: string, patch: Partial<Medication>) => {
       setMedications((prev) => {
-        const updated = prev.map((m) => (m.id === id ? { ...m, ...patch } : m));
-        if (USE_SQLITE) {
-          const med = updated.find((m) => m.id === id);
-          if (med) dbInsertMedication(med);
-        }
-        return updated;
+        const med = prev.find((entry) => entry.id === id);
+        if (!med) return prev;
+        const updated = { ...med, ...patch };
+        void dataStore.upsertMedication(updated);
+        return prev.map((entry) => (entry.id === id ? updated : entry));
       });
     },
     [],
   );
 
   const deleteMedication = useCallback((id: string) => {
-    if (USE_SQLITE) dbDeleteMedication(id);
-    setMedications((prev) => prev.filter((m) => m.id !== id));
+    void dataStore.deleteMedication(id);
+    setMedications((prev) => prev.filter((entry) => entry.id !== id));
   }, []);
 
   const completeMedication = useCallback((id: string) => {
     setMedications((prev) => {
-      const updated = prev.map((m) =>
-        m.id === id
-          ? { ...m, completedAt: new Date().toISOString(), skipped: false }
-          : m,
-      );
-      if (USE_SQLITE) {
-        const med = updated.find((m) => m.id === id);
-        if (med) dbInsertMedication(med);
-      }
-      return updated;
+      const med = prev.find((entry) => entry.id === id);
+      if (!med) return prev;
+      const updated = {
+        ...med,
+        completedAt: new Date().toISOString(),
+        skipped: false,
+      };
+      void dataStore.upsertMedication(updated);
+      return prev.map((entry) => (entry.id === id ? updated : entry));
     });
   }, []);
 
   const skipMedication = useCallback((id: string) => {
     setMedications((prev) => {
-      const updated = prev.map((m) =>
-        m.id === id ? { ...m, skipped: true, completedAt: undefined } : m,
-      );
-      if (USE_SQLITE) {
-        const med = updated.find((m) => m.id === id);
-        if (med) dbInsertMedication(med);
-      }
-      return updated;
+      const med = prev.find((entry) => entry.id === id);
+      if (!med) return prev;
+      const updated = {
+        ...med,
+        skipped: true,
+        completedAt: undefined,
+      };
+      void dataStore.upsertMedication(updated);
+      return prev.map((entry) => (entry.id === id ? updated : entry));
     });
   }, []);
 
   // ── Meal Templates ────────────────────────────────────────────────────────
   const addMealTemplate = useCallback((t: Omit<MealTemplate, "id">) => {
     const newT: MealTemplate = { ...t, id: uid() };
-    if (USE_SQLITE) dbInsertMealTemplate(newT);
+    void dataStore.upsertMealTemplate(newT);
     setMealTemplates((prev) => [...prev, newT]);
   }, []);
 
   const updateMealTemplate = useCallback(
     (id: string, patch: Partial<MealTemplate>) => {
       setMealTemplates((prev) => {
-        const updated = prev.map((t) => (t.id === id ? { ...t, ...patch } : t));
-        if (USE_SQLITE) {
-          const t = updated.find((t) => t.id === id);
-          if (t) dbInsertMealTemplate(t);
-        }
-        return updated;
+        const template = prev.find((entry) => entry.id === id);
+        if (!template) return prev;
+        const updated = { ...template, ...patch };
+        void dataStore.upsertMealTemplate(updated);
+        return prev.map((entry) => (entry.id === id ? updated : entry));
       });
     },
     [],
   );
 
   const deleteMealTemplate = useCallback((id: string) => {
-    if (USE_SQLITE) dbDeleteMealTemplate(id);
-    setMealTemplates((prev) => prev.filter((t) => t.id !== id));
+    void dataStore.deleteMealTemplate(id);
+    setMealTemplates((prev) => prev.filter((entry) => entry.id !== id));
   }, []);
 
   // ── Day Templates ─────────────────────────────────────────────────────────
   const addDayTemplate = useCallback((t: Omit<DayTemplate, "id">) => {
     const newT: DayTemplate = { ...t, id: uid() };
-    if (USE_SQLITE) dbInsertDayTemplate(newT);
+    void dataStore.upsertDayTemplate(newT);
     setDayTemplates((prev) => [...prev, newT]);
   }, []);
 
   const deleteDayTemplate = useCallback((id: string) => {
-    if (USE_SQLITE) dbDeleteDayTemplate(id);
-    setDayTemplates((prev) => prev.filter((t) => t.id !== id));
+    void dataStore.deleteDayTemplate(id);
+    setDayTemplates((prev) => prev.filter((entry) => entry.id !== id));
   }, []);
 
   const applyDayTemplate = useCallback(
     (templateId: string, date: string) => {
-      const template = dayTemplates.find((t) => t.id === templateId);
+      const template = dayTemplates.find((entry) => entry.id === templateId);
       if (!template) return;
-      const newMeals: ScheduledMeal[] = template.meals.map((m) => ({
-        ...m,
+      const newMeals: ScheduledMeal[] = template.meals.map((meal) => ({
+        ...meal,
         id: uid(),
         date,
         completedAt: undefined,
         skipped: false,
       }));
       const newMeds: Medication[] = template.medications.map((med) => {
-        const linked = newMeals.find((m) => m.category === med.linkToCategory);
+        const linked = newMeals.find(
+          (meal) => meal.category === med.linkToCategory,
+        );
         const computedTime = linked
           ? computeMedicationTime(
               linked.scheduledTime,
@@ -1034,20 +939,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           computedTime,
         };
       });
-      if (USE_SQLITE) {
-        newMeals.forEach((m) => dbInsertMeal(m));
-        newMeds.forEach((m) => dbInsertMedication(m));
-      }
+
+      allMeals
+        .filter((meal) => meal.date === date)
+        .forEach((meal) => void dataStore.deleteMeal(meal.id));
+      medications
+        .filter((med) => med.date === date)
+        .forEach((med) => void dataStore.deleteMedication(med.id));
+      void dataStore.upsertMeals(newMeals);
+      void dataStore.upsertMedications(newMeds);
+
       setAllMeals((prev) => [
-        ...prev.filter((m) => m.date !== date),
+        ...prev.filter((meal) => meal.date !== date),
         ...newMeals,
       ]);
       setMedications((prev) => [
-        ...prev.filter((m) => m.date !== date),
+        ...prev.filter((med) => med.date !== date),
         ...newMeds,
       ]);
     },
-    [dayTemplates],
+    [allMeals, dayTemplates, medications],
   );
 
   return (

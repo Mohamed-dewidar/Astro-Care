@@ -7,6 +7,7 @@ class DataStoreRegistry {
 
   register(name: string, dataStore: DataStoreFactory) {
     this.dataStores.set(name, dataStore);
+    return this;
   }
 
   get(name: string): DataStore {
