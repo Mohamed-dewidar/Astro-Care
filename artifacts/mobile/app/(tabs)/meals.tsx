@@ -30,6 +30,7 @@ import {
   MEAL_CATEGORY_LABELS,
   MealCategory,
   MealTemplate,
+  ScheduledMeal,
 } from "@/types";
 import { getTodayString, uid } from "@/utils/dateUtils";
 import TodayMeals from "@/components/Meals/TodayMeals";
@@ -80,6 +81,8 @@ export default function MealsScreen() {
     mealTemplates,
     completeMeal,
     skipMeal,
+    undoMeal,
+    updateMealTime,
     addMeal,
     addMealTemplate,
     addFood,
@@ -125,6 +128,11 @@ export default function MealsScreen() {
     useState<MealTemplate | null>(null);
   const [scheduleDate, setScheduleDate] = useState(SCHEDULE_DAYS[0].value);
   const [scheduleTime, setScheduleTime] = useState("08:00");
+
+  // ── Edit meal time modal ──────────────────────────────────────────────────
+  const [editTimeModal, setEditTimeModal] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<ScheduledMeal | null>(null);
+  const [editMealTime, setEditMealTime] = useState("08:00");
 
   const topPad = Platform.OS === "web" ? 80 : insets.top;
 
@@ -240,6 +248,32 @@ export default function MealsScreen() {
         : [...prev, foodId],
     );
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const openEditTime = (meal: ScheduledMeal) => {
+    setEditingMeal(meal);
+    setEditMealTime(meal.scheduledTime);
+    setEditTimeModal(true);
+  };
+
+  const closeEditTime = () => {
+    setEditTimeModal(false);
+    setEditingMeal(null);
+  };
+
+  const saveEditTime = () => {
+    if (!editingMeal) return;
+    updateMealTime(editingMeal.id, editMealTime);
+    closeEditTime();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const handleDeleteMeal = (meal: ScheduledMeal) => {
+    confirmDelete(
+      "Delete Meal",
+      `Remove "${meal.name}" from today's schedule?`,
+      () => deleteMeal(meal.id),
+    );
   };
 
   // Edit template
@@ -388,6 +422,9 @@ export default function MealsScreen() {
             foodMap={foodMap}
             completeMeal={completeMeal}
             skipMeal={skipMeal}
+            undoMeal={undoMeal}
+            onUpdateTime={openEditTime}
+            onDelete={handleDeleteMeal}
           />
         )}
 
@@ -1010,6 +1047,64 @@ export default function MealsScreen() {
                     <Text style={mealsStyles.modalBtnText}>
                       Add to Schedule
                     </Text>
+                  </LinearGradient>
+                </Pressable>
+              </GlassCard>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ════ Edit Meal Time Modal ════ */}
+      <Modal
+        visible={editTimeModal}
+        transparent
+        animationType="slide"
+        onRequestClose={closeEditTime}
+      >
+        <KeyboardAvoidingView
+          style={mealsStyles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
+        >
+          <Pressable style={mealsStyles.modalOverlay} onPress={closeEditTime}>
+            <Pressable>
+              <GlassCard
+                style={[
+                  mealsStyles.modalCard,
+                  { paddingBottom: insets.bottom + 16 },
+                ]}
+              >
+                <View style={mealsStyles.modalHeader}>
+                  <View>
+                    <Text style={mealsStyles.modalTitle}>Update Time</Text>
+                    {editingMeal && (
+                      <Text style={mealsStyles.scheduleSubtitle}>
+                        {editingMeal.name}
+                      </Text>
+                    )}
+                  </View>
+                  <Pressable
+                    onPress={closeEditTime}
+                    style={mealsStyles.closeBtn}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="close" size={20} color="#94A3B8" />
+                  </Pressable>
+                </View>
+
+                <Text style={mealsStyles.sectionLabel}>Time</Text>
+                <TimePicker value={editMealTime} onChange={setEditMealTime} />
+
+                <Pressable style={mealsStyles.modalBtn} onPress={saveEditTime}>
+                  <LinearGradient
+                    colors={["#7C3AED", "#3B82F6"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={mealsStyles.modalBtnGradient}
+                  >
+                    <Ionicons name="time" size={16} color="#FFF" />
+                    <Text style={mealsStyles.modalBtnText}>Save Time</Text>
                   </LinearGradient>
                 </Pressable>
               </GlassCard>

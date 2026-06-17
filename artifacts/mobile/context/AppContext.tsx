@@ -22,126 +22,12 @@ import {
   SqliteDataStore,
 } from "@/infrastructure/storage";
 import { computeMedicationTime, getTodayString, uid } from "@/utils/dateUtils";
+import {
+  getChangedMedications,
+  syncMedicationsToMealTime,
+} from "@/utils/mealMedicationSync";
 
-// ─── Seed data ─────────────────────────────────────────────────────────────
-
-const SEED_FOODS: Food[] = [
-  {
-    id: "f1",
-    name: "Oats",
-    calories: 389,
-    protein: 17,
-    carbs: 66,
-    fat: 7,
-    fiber: 11,
-    tags: ["grain", "breakfast"],
-  },
-  {
-    id: "f2",
-    name: "Banana",
-    calories: 89,
-    protein: 1,
-    carbs: 23,
-    fat: 0,
-    fiber: 3,
-    tags: ["fruit"],
-  },
-  {
-    id: "f3",
-    name: "Milk",
-    calories: 61,
-    protein: 3,
-    carbs: 5,
-    fat: 3,
-    tags: ["dairy"],
-  },
-  {
-    id: "f4",
-    name: "Eggs",
-    calories: 155,
-    protein: 13,
-    carbs: 1,
-    fat: 11,
-    tags: ["protein"],
-  },
-  {
-    id: "f5",
-    name: "Chicken Breast",
-    calories: 165,
-    protein: 31,
-    carbs: 0,
-    fat: 4,
-    tags: ["protein", "meat"],
-  },
-  {
-    id: "f6",
-    name: "Brown Rice",
-    calories: 216,
-    protein: 5,
-    carbs: 45,
-    fat: 2,
-    fiber: 4,
-    tags: ["grain"],
-  },
-  {
-    id: "f7",
-    name: "Broccoli",
-    calories: 55,
-    protein: 4,
-    carbs: 11,
-    fat: 1,
-    fiber: 5,
-    tags: ["vegetable"],
-  },
-  {
-    id: "f8",
-    name: "Greek Yogurt",
-    calories: 100,
-    protein: 17,
-    carbs: 6,
-    fat: 0,
-    tags: ["dairy", "protein"],
-  },
-  {
-    id: "f9",
-    name: "Almonds",
-    calories: 579,
-    protein: 21,
-    carbs: 22,
-    fat: 50,
-    fiber: 13,
-    tags: ["nuts", "snack"],
-  },
-  {
-    id: "f10",
-    name: "Avocado",
-    calories: 160,
-    protein: 2,
-    carbs: 9,
-    fat: 15,
-    fiber: 7,
-    tags: ["fruit", "healthy-fat"],
-  },
-  {
-    id: "f11",
-    name: "Sweet Potato",
-    calories: 86,
-    protein: 2,
-    carbs: 20,
-    fat: 0,
-    fiber: 3,
-    tags: ["vegetable"],
-  },
-  {
-    id: "f12",
-    name: "Salmon",
-    calories: 208,
-    protein: 20,
-    carbs: 0,
-    fat: 13,
-    tags: ["protein", "fish"],
-  },
-];
+// ─── Initial achievements ──────────────────────────────────────────────────
 
 const INITIAL_ACHIEVEMENTS: Achievement[] = [
   {
@@ -187,101 +73,6 @@ const INITIAL_ACHIEVEMENTS: Achievement[] = [
     unlocked: false,
   },
 ];
-
-function buildTodayMeals(): ScheduledMeal[] {
-  const today = getTodayString();
-  return [
-    {
-      id: uid(),
-      name: "Protein Oats",
-      category: "breakfast",
-      scheduledTime: "08:00",
-      reminderEnabled: true,
-      date: today,
-      items: [
-        { id: uid(), foodId: "f1", quantity: 80, unit: "g" },
-        { id: uid(), foodId: "f2", quantity: 1, unit: "piece" },
-        { id: uid(), foodId: "f3", quantity: 200, unit: "ml" },
-      ],
-    },
-    {
-      id: uid(),
-      name: "Greek Yogurt",
-      category: "morning-snack",
-      scheduledTime: "10:30",
-      reminderEnabled: true,
-      date: today,
-      items: [{ id: uid(), foodId: "f8", quantity: 150, unit: "g" }],
-    },
-    {
-      id: uid(),
-      name: "Chicken & Rice",
-      category: "lunch",
-      scheduledTime: "13:00",
-      reminderEnabled: true,
-      date: today,
-      items: [
-        { id: uid(), foodId: "f5", quantity: 200, unit: "g" },
-        { id: uid(), foodId: "f6", quantity: 100, unit: "g" },
-        { id: uid(), foodId: "f7", quantity: 80, unit: "g" },
-      ],
-    },
-    {
-      id: uid(),
-      name: "Afternoon Almonds",
-      category: "afternoon-snack",
-      scheduledTime: "15:30",
-      reminderEnabled: false,
-      date: today,
-      items: [{ id: uid(), foodId: "f9", quantity: 30, unit: "g" }],
-    },
-    {
-      id: uid(),
-      name: "Salmon Dinner",
-      category: "dinner",
-      scheduledTime: "19:00",
-      reminderEnabled: true,
-      date: today,
-      items: [
-        { id: uid(), foodId: "f12", quantity: 180, unit: "g" },
-        { id: uid(), foodId: "f7", quantity: 100, unit: "g" },
-        { id: uid(), foodId: "f10", quantity: 1, unit: "piece" },
-      ],
-    },
-  ];
-}
-
-function buildTodayMeds(meals: ScheduledMeal[]): Medication[] {
-  const today = getTodayString();
-  const breakfast = meals.find((m) => m.category === "breakfast");
-  const lunch = meals.find((m) => m.category === "lunch");
-  const result: Medication[] = [];
-  if (breakfast) {
-    result.push({
-      id: uid(),
-      name: "Vitamin D3",
-      dosage: "2000 IU",
-      relationType: "after",
-      linkToCategory: "breakfast",
-      minutesOffset: 30,
-      computedTime: computeMedicationTime(breakfast.scheduledTime, "after", 30),
-      date: today,
-    });
-  }
-  if (lunch) {
-    result.push({
-      id: uid(),
-      name: "Omega-3",
-      dosage: "1000mg",
-      relationType: "after",
-      linkToCategory: "lunch",
-      minutesOffset: 15,
-      computedTime: computeMedicationTime(lunch.scheduledTime, "after", 15),
-      date: today,
-    });
-  }
-  return result;
-}
 
 function buildTodayMedsFromTemplates(
   meals: ScheduledMeal[],
@@ -329,6 +120,8 @@ interface AppContextType {
   deleteMeal: (id: string) => void;
   completeMeal: (id: string) => void;
   skipMeal: (id: string) => void;
+  undoMeal: (id: string) => void;
+  updateMealTime: (id: string, scheduledTime: string) => void;
 
   medications: Medication[];
   todaysMedication: Medication[];
@@ -406,39 +199,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await dataStore.init();
         const today = getTodayString();
 
-        let loadedFoods = await dataStore.getFoods();
-        if (loadedFoods.length === 0) {
-          for (const food of SEED_FOODS) {
-            await dataStore.upsertFood(food);
-          }
-          loadedFoods = SEED_FOODS;
-        }
-        setFoods(loadedFoods);
+        setFoods(await dataStore.getFoods());
 
-        let loadedMeals = await dataStore.getMeals();
-        if (!loadedMeals.some((meal) => meal.date === today)) {
-          const seeded = buildTodayMeals();
-          await dataStore.upsertMeals(seeded);
-          loadedMeals = [...loadedMeals, ...seeded];
-        }
+        const loadedMeals = await dataStore.getMeals();
         setAllMeals(loadedMeals);
 
         const loadedMedTemplates = await dataStore.getMedicationTemplates();
         setMedicationTemplates(loadedMedTemplates);
 
         let loadedMeds = await dataStore.getMedications();
-        if (!loadedMeds.some((med) => med.date === today)) {
+        if (
+          !loadedMeds.some((med) => med.date === today) &&
+          loadedMedTemplates.length > 0
+        ) {
           const todayMeals = loadedMeals.filter((meal) => meal.date === today);
-          const seeded =
-            loadedMedTemplates.length > 0
-              ? buildTodayMedsFromTemplates(
-                  todayMeals,
-                  loadedMedTemplates,
-                  today,
-                )
-              : buildTodayMeds(todayMeals);
-          await dataStore.upsertMedications(seeded);
-          loadedMeds = [...loadedMeds, ...seeded];
+          const generated = buildTodayMedsFromTemplates(
+            todayMeals,
+            loadedMedTemplates,
+            today,
+          );
+          await dataStore.upsertMedications(generated);
+          loadedMeds = [...loadedMeds, ...generated];
         }
         setMedications(loadedMeds);
 
@@ -662,6 +443,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAllMeals((prev) => prev.filter((entry) => entry.id !== id));
   }, []);
 
+  const persistMedicationChanges = useCallback(
+    (prev: Medication[], next: Medication[]) => {
+      const changed = getChangedMedications(prev, next);
+      if (changed.length > 0) void dataStore.upsertMedications(changed);
+    },
+    [],
+  );
+
+  const applyMedicationSync = useCallback(
+    (prev: Medication[], meal: ScheduledMeal, anchorTime: string) => {
+      const next = syncMedicationsToMealTime(prev, meal, anchorTime);
+      persistMedicationChanges(prev, next);
+      return next;
+    },
+    [persistMedicationChanges],
+  );
+
   const completeMeal = useCallback(
     (id: string) => {
       const completedAt = new Date().toISOString();
@@ -682,22 +480,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         prev.map((meal) => (meal.id === id ? updatedMeal : meal)),
       );
 
-      setMedications((prev) => {
-        const updated = prev.map((med) => {
-          if (med.linkToCategory !== completedMeal.category) return med;
-          const next = {
-            ...med,
-            computedTime: computeMedicationTime(
-              actualTime,
-              med.relationType,
-              med.minutesOffset,
-            ),
-          };
-          void dataStore.upsertMedication(next);
-          return next;
-        });
-        return updated;
-      });
+      setMedications((prev) =>
+        applyMedicationSync(prev, updatedMeal, actualTime),
+      );
 
       setAchievements((prev) => {
         const updated = prev.map((achievement) =>
@@ -716,7 +501,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return updated;
       });
     },
-    [allMeals],
+    [allMeals, applyMedicationSync],
   );
 
   const skipMeal = useCallback((id: string) => {
@@ -732,6 +517,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return prev.map((entry) => (entry.id === id ? updated : entry));
     });
   }, []);
+
+  const undoMeal = useCallback(
+    (id: string) => {
+      const meal = allMeals.find((entry) => entry.id === id);
+      if (!meal) return;
+
+      const wasCompleted = !!meal.completedAt;
+      const updated = {
+        ...meal,
+        completedAt: undefined,
+        skipped: false,
+      };
+      void dataStore.upsertMeal(updated);
+      setAllMeals((prev) =>
+        prev.map((entry) => (entry.id === id ? updated : entry)),
+      );
+
+      if (wasCompleted) {
+        setMedications((prev) =>
+          applyMedicationSync(prev, updated, updated.scheduledTime),
+        );
+      }
+    },
+    [allMeals, applyMedicationSync],
+  );
+
+  const updateMealTime = useCallback(
+    (id: string, scheduledTime: string) => {
+      const meal = allMeals.find((entry) => entry.id === id);
+      if (!meal || meal.completedAt || meal.skipped) return;
+
+      const updated = { ...meal, scheduledTime };
+      void dataStore.upsertMeal(updated);
+      setAllMeals((prev) =>
+        prev.map((entry) => (entry.id === id ? updated : entry)),
+      );
+      setMedications((prev) =>
+        applyMedicationSync(prev, updated, scheduledTime),
+      );
+    },
+    [allMeals, applyMedicationSync],
+  );
 
   // ── Medications ───────────────────────────────────────────────────────────
   const addMedicationTemplate = useCallback(
@@ -978,6 +805,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteMeal,
         completeMeal,
         skipMeal,
+        undoMeal,
+        updateMealTime,
         medications,
         todaysMedication,
         medicationTemplates,

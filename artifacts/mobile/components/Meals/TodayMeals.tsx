@@ -9,6 +9,9 @@ type TodayMealsProps = {
   foodMap: Record<string, string>;
   completeMeal: (id: string) => void;
   skipMeal: (id: string) => void;
+  undoMeal: (id: string) => void;
+  onUpdateTime: (meal: ScheduledMeal) => void;
+  onDelete: (meal: ScheduledMeal) => void;
 };
 
 export default function TodayMeals({
@@ -16,6 +19,9 @@ export default function TodayMeals({
   foodMap,
   completeMeal,
   skipMeal,
+  undoMeal,
+  onUpdateTime,
+  onDelete,
 }: TodayMealsProps) {
   return (
     <View>
@@ -35,6 +41,9 @@ export default function TodayMeals({
             foodNames={foodMap}
             onComplete={() => completeMeal(meal.id)}
             onSkip={() => skipMeal(meal.id)}
+            onUndo={() => undoMeal(meal.id)}
+            onUpdateTime={() => onUpdateTime(meal)}
+            onDelete={() => onDelete(meal)}
           />
         ))
       )}
