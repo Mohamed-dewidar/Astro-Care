@@ -419,30 +419,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ── Meals ─────────────────────────────────────────────────────────────────
-  const addMeal = useCallback((meal: Omit<ScheduledMeal, "id">) => {
-    const newMeal: ScheduledMeal = { ...meal, id: uid() };
-    void dataStore.upsertMeal(newMeal);
-    setAllMeals((prev) => [...prev, newMeal]);
-  }, []);
-
-  const updateMeal = useCallback(
-    (id: string, patch: Partial<ScheduledMeal>) => {
-      setAllMeals((prev) => {
-        const meal = prev.find((entry) => entry.id === id);
-        if (!meal) return prev;
-        const updated = { ...meal, ...patch };
-        void dataStore.upsertMeal(updated);
-        return prev.map((entry) => (entry.id === id ? updated : entry));
-      });
-    },
-    [],
-  );
-
-  const deleteMeal = useCallback((id: string) => {
-    void dataStore.deleteMeal(id);
-    setAllMeals((prev) => prev.filter((entry) => entry.id !== id));
-  }, []);
-
   const persistMedicationChanges = useCallback(
     (prev: Medication[], next: Medication[]) => {
       const changed = getChangedMedications(prev, next);
@@ -459,6 +435,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
     [persistMedicationChanges],
   );
+
+  const addMeal = useCallback(
+    (meal: Omit<ScheduledMeal, "id">) => {
+      const newMeal: ScheduledMeal = { ...meal, id: uid() };
+      void dataStore.upsertMeal(newMeal);
+      setAllMeals((prev) => [...prev, newMeal]);
+      setMedications((prev) =>
+        applyMedicationSync(prev, newMeal, newMeal.scheduledTime),
+      );
+    },
+    [applyMedicationSync],
+  );
+
+  const updateMeal = useCallback(
+    (id: string, patch: Partial<ScheduledMeal>) => {
+      const meal = allMeals.find((entry) => entry.id === id);
+      if (!meal) return;
+
+      const updated = { ...meal, ...patch };
+      void dataStore.upsertMeal(updated);
+      setAllMeals((prev) =>
+        prev.map((entry) => (entry.id === id ? updated : entry)),
+      );
+
+      const affectsMedTimes =
+        patch.scheduledTime !== undefined || patch.category !== undefined;
+      if (affectsMedTimes && !updated.skipped) {
+        const anchorTime = updated.completedAt
+          ? (() => {
+              const completed = new Date(updated.completedAt);
+              return `${String(completed.getHours()).padStart(2, "0")}:${String(completed.getMinutes()).padStart(2, "0")}`;
+            })()
+          : updated.scheduledTime;
+        setMedications((prev) =>
+          applyMedicationSync(prev, updated, anchorTime),
+        );
+      }
+    },
+    [allMeals, applyMedicationSync],
+  );
+
+  const deleteMeal = useCallback((id: string) => {
+    void dataStore.deleteMeal(id);
+    setAllMeals((prev) => prev.filter((entry) => entry.id !== id));
+  }, []);
 
   const completeMeal = useCallback(
     (id: string) => {
