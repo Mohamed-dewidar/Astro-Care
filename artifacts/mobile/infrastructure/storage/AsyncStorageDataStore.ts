@@ -20,6 +20,7 @@ const KEYS = {
   dayTemplates: "dayTemplates",
   achievements: "achievements",
   medicationTemplates: "medicationTemplates",
+  waterDaily: "water_daily",
 } as const;
 
 class AsyncStorageDataStore implements DataStore {
@@ -115,6 +116,19 @@ class AsyncStorageDataStore implements DataStore {
 
   async upsertMedications(medications: Medication[]): Promise<void> {
     await this.upsertMany(KEYS.medications, medications);
+  }
+
+  async getWaterIntake(date: string): Promise<number> {
+    const map =
+      (await this.getJson<Record<string, number>>(KEYS.waterDaily)) ?? {};
+    return map[date] ?? 0;
+  }
+
+  async setWaterIntake(date: string, intakeMl: number): Promise<void> {
+    const map =
+      (await this.getJson<Record<string, number>>(KEYS.waterDaily)) ?? {};
+    map[date] = intakeMl;
+    await this.saveJson(KEYS.waterDaily, map);
   }
 
   private async getJson<T>(key: string): Promise<T | null> {

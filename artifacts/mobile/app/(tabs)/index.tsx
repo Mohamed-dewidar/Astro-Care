@@ -18,6 +18,8 @@ import { MealPlanetCard } from "@/components/MealPlanetCard";
 import { MedicationCard } from "@/components/MedicationCard";
 import { ProgressRing } from "@/components/ProgressRing";
 import { SpaceBackground } from "@/components/SpaceBackground";
+import { WaterGoalModal } from "@/components/WaterGoalModal";
+import { WaterTracker } from "@/components/WaterTracker";
 import { useApp } from "@/context/AppContext";
 import {
   formatDate,
@@ -45,6 +47,7 @@ export default function MissionControlScreen() {
     completeMedication,
     skipMedication,
     timelines,
+    waterSettings,
   } = useApp();
   const today = getTodayString();
 
@@ -82,6 +85,8 @@ export default function MissionControlScreen() {
     <View style={styles.container}>
       <SpaceBackground />
 
+      <WaterGoalModal />
+
       <Modal transparent animationType="fade" visible={showStreakModal}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
@@ -118,6 +123,9 @@ export default function MissionControlScreen() {
             <Text style={styles.streakText}>{currentStreak}</Text>
           </GlassCard>
         </View>
+
+        {waterSettings.goalSet && <WaterTracker />}
+
         <GlassCard style={styles.progressCard} glowColor="#7C3AED">
           <View style={styles.progressRow}>
             <ProgressRing

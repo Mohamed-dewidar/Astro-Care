@@ -7,7 +7,9 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -50,10 +52,15 @@ export default function SettingsScreen() {
     foods,
     todayMeals,
     todaysMedication,
+    waterSettings,
+    todayWaterMl,
+    setWaterGoal,
+    setWaterRemindersEnabled,
   } = useApp();
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
   const topPad = Platform.OS === "web" ? 80 : insets.top;
   const weeklyAdherence = 72;
+  const [goalInput, setGoalInput] = useState(String(waterSettings.dailyGoalMl));
 
   const [notifStatus, setNotifStatus] =
     useState<NotifPermStatus>("undetermined");
@@ -67,6 +74,19 @@ export default function SettingsScreen() {
       setScheduledCount(count);
     })();
   }, []);
+
+  useEffect(() => {
+    setGoalInput(String(waterSettings.dailyGoalMl));
+  }, [waterSettings.dailyGoalMl]);
+
+  const handleGoalBlur = () => {
+    const parsed = parseInt(goalInput, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      setWaterGoal(parsed);
+    } else {
+      setGoalInput(String(waterSettings.dailyGoalMl));
+    }
+  };
 
   const handleEnableNotifications = async () => {
     const status = await requestNotificationPermissions();
@@ -287,6 +307,12 @@ export default function SettingsScreen() {
                     Medication alerts — auto-adjusted to actual meal time
                   </Text>
                 </View>
+                <View style={styles.notifTypeRow}>
+                  <Ionicons name="water" size={14} color="#22D3EE" />
+                  <Text style={styles.notifTypeText}>
+                    Hydration alerts — every hour outside quiet hours
+                  </Text>
+                </View>
               </View>
             )}
 
@@ -300,6 +326,54 @@ export default function SettingsScreen() {
                 </View>
               </View>
             )}
+          </GlassCard>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Hydration</Text>
+          <GlassCard style={styles.hydrationCard} glowColor="#22D3EE">
+            <View style={styles.hydrationRow}>
+              <Text style={styles.hydrationLabel}>Today's intake</Text>
+              <Text style={styles.hydrationValue}>
+                {todayWaterMl} / {waterSettings.dailyGoalMl} ml
+              </Text>
+            </View>
+
+            <View style={styles.hydrationDivider} />
+
+            <View style={styles.hydrationRow}>
+              <Text style={styles.hydrationLabel}>Daily goal</Text>
+              <View style={styles.goalInputRow}>
+                <TextInput
+                  style={styles.goalInput}
+                  value={goalInput}
+                  onChangeText={setGoalInput}
+                  onBlur={handleGoalBlur}
+                  keyboardType="number-pad"
+                  selectTextOnFocus
+                />
+                <Text style={styles.goalUnit}>ml</Text>
+              </View>
+            </View>
+
+            <View style={styles.hydrationDivider} />
+
+            <View style={styles.hydrationRow}>
+              <View style={styles.hydrationToggleInfo}>
+                <Text style={styles.hydrationLabel}>Hourly reminders</Text>
+                <Text style={styles.hydrationSublabel}>
+                  Every hour outside quiet hours
+                </Text>
+              </View>
+              <Switch
+                value={waterSettings.remindersEnabled}
+                onValueChange={setWaterRemindersEnabled}
+                trackColor={{ false: "#334155", true: "#22D3EE88" }}
+                thumbColor={
+                  waterSettings.remindersEnabled ? "#22D3EE" : "#94A3B8"
+                }
+              />
+            </View>
           </GlassCard>
         </View>
 
@@ -500,6 +574,36 @@ const styles = StyleSheet.create({
   },
   notifTypeRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   notifTypeText: { color: "#64748B", fontSize: 12, flex: 1, lineHeight: 16 },
+  hydrationCard: { padding: 18, gap: 0 },
+  hydrationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+  },
+  hydrationLabel: { color: "#F8FAFC", fontSize: 14, fontWeight: "500" },
+  hydrationValue: { color: "#22D3EE", fontSize: 14, fontWeight: "600" },
+  hydrationSublabel: { color: "#64748B", fontSize: 12, marginTop: 2 },
+  hydrationToggleInfo: { flex: 1, marginRight: 12 },
+  hydrationDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  goalInputRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  goalInput: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(34, 211, 238, 0.25)",
+    borderRadius: 8,
+    color: "#F8FAFC",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "right",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    minWidth: 72,
+  },
+  goalUnit: { color: "#94A3B8", fontSize: 14 },
   achievementsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   achievementCard: {
     width: "30.5%",

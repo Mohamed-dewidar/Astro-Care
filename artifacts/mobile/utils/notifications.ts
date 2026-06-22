@@ -1,6 +1,9 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
+import type { QuietHoursSettings } from "@/types";
+import { getAwakeHours } from "@/utils/quietHours";
+
 export type NotifPermStatus = "granted" | "denied" | "undetermined";
 
 export async function getNotificationPermissionStatus(): Promise<NotifPermStatus> {
@@ -36,7 +39,14 @@ export async function scheduleMealNotification(meal: {
 
     const [h, m] = meal.scheduledTime.split(":").map(Number);
     const now = new Date();
-    const trigger = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+    const trigger = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      h,
+      m,
+      0,
+    );
     if (trigger.getTime() <= Date.now()) return;
 
     // Main notification at meal time
@@ -78,7 +88,9 @@ export async function cancelMealNotification(mealId: string): Promise<void> {
   if (Platform.OS === "web") return;
   try {
     await Notifications.cancelScheduledNotificationAsync(`meal-${mealId}`);
-    await Notifications.cancelScheduledNotificationAsync(`meal-early-${mealId}`);
+    await Notifications.cancelScheduledNotificationAsync(
+      `meal-early-${mealId}`,
+    );
   } catch (_) {}
 }
 
@@ -95,7 +107,14 @@ export async function scheduleMedicationNotification(med: {
 
     const [h, m] = med.computedTime.split(":").map(Number);
     const now = new Date();
-    const trigger = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+    const trigger = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      h,
+      m,
+      0,
+    );
     if (trigger.getTime() <= Date.now()) return;
 
     await Notifications.scheduleNotificationAsync({
@@ -114,9 +133,60 @@ export async function scheduleMedicationNotification(med: {
   } catch (_) {}
 }
 
-export async function cancelMedicationNotification(medId: string): Promise<void> {
+export async function cancelMedicationNotification(
+  medId: string,
+): Promise<void> {
   if (Platform.OS === "web") return;
   try {
     await Notifications.cancelScheduledNotificationAsync(`med-${medId}`);
+  } catch (_) {}
+}
+
+export async function cancelWaterReminders(): Promise<void> {
+  if (Platform.OS === "web") return;
+  try {
+    const all = await Notifications.getAllScheduledNotificationsAsync();
+    for (const notification of all) {
+      if (notification.identifier.startsWith("water-hour-")) {
+        await Notifications.cancelScheduledNotificationAsync(
+          notification.identifier,
+        );
+      }
+    }
+  } catch (_) {}
+}
+
+export async function scheduleWaterReminders(
+  quietHours: QuietHoursSettings,
+  remindersEnabled: boolean,
+): Promise<void> {
+  if (Platform.OS === "web" || !remindersEnabled) return;
+
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== "granted") return;
+
+    await cancelWaterReminders();
+
+    const awakeHours = quietHours.enabled
+      ? getAwakeHours(quietHours.bedtime, quietHours.wakeTime)
+      : Array.from({ length: 24 }, (_, i) => i);
+
+    for (const hour of awakeHours) {
+      await Notifications.scheduleNotificationAsync({
+        identifier: `water-hour-${hour}`,
+        content: {
+          title: "Hydration Check",
+          body: "Time to drink some water",
+          sound: true,
+          data: { type: "water" },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour,
+          minute: 0,
+        },
+      });
+    }
   } catch (_) {}
 }

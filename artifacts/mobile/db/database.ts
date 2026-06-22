@@ -128,6 +128,13 @@ export function initDatabase(): void {
       unlocked_at TEXT
     )`,
   );
+
+  db.execSync(
+    `CREATE TABLE IF NOT EXISTS water_daily (
+      date       TEXT PRIMARY KEY,
+      intake_ml  INTEGER NOT NULL DEFAULT 0
+    )`,
+  );
 }
 
 // ─── Settings ──────────────────────────────────────────────────────────────
@@ -528,5 +535,22 @@ export function dbUpsertAchievement(a: Achievement): void {
       a.unlocked ? 1 : 0,
       a.unlockedAt ?? null,
     ],
+  );
+}
+
+// ─── Water daily intake ────────────────────────────────────────────────────
+
+export function dbGetWaterIntake(date: string): number {
+  const row = getDb().getFirstSync<{ intake_ml: number }>(
+    "SELECT intake_ml FROM water_daily WHERE date = ?",
+    [date],
+  );
+  return row?.intake_ml ?? 0;
+}
+
+export function dbSetWaterIntake(date: string, intakeMl: number): void {
+  getDb().runSync(
+    `INSERT OR REPLACE INTO water_daily (date, intake_ml) VALUES (?, ?)`,
+    [date, intakeMl],
   );
 }

@@ -4,12 +4,14 @@ import { useApp } from "@/context/AppContext";
 import {
   cancelMealNotification,
   cancelMedicationNotification,
+  cancelWaterReminders,
   scheduleMealNotification,
   scheduleMedicationNotification,
+  scheduleWaterReminders,
 } from "@/utils/notifications";
 
 export function NotificationScheduler() {
-  const { todayMeals, todaysMedication } = useApp();
+  const { todayMeals, todaysMedication, quietHours, waterSettings } = useApp();
 
   useEffect(() => {
     todayMeals.forEach((meal) => {
@@ -30,6 +32,14 @@ export function NotificationScheduler() {
       }
     });
   }, [todaysMedication]);
+
+  useEffect(() => {
+    if (waterSettings.remindersEnabled) {
+      void scheduleWaterReminders(quietHours, true);
+    } else {
+      void cancelWaterReminders();
+    }
+  }, [quietHours, waterSettings.remindersEnabled]);
 
   return null;
 }

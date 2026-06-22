@@ -53,4 +53,8 @@ export interface DataStore {
   // Bulk helpers (bootstrap seeding, applyDayTemplate)
   upsertMeals: (meals: ScheduledMeal[]) => Promise<void>;
   upsertMedications: (medications: Medication[]) => Promise<void>;
+
+  // Water
+  getWaterIntake: (date: string) => Promise<number>;
+  setWaterIntake: (date: string, intakeMl: number) => Promise<void>;
 }

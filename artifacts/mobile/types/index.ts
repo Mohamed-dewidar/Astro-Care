@@ -175,3 +175,29 @@ export interface DailyStats {
   medicationsCompleted: number;
   medicationsTotal: number;
 }
+
+export interface QuietHoursSettings {
+  enabled: boolean;
+  bedtime: string;
+  wakeTime: string;
+}
+
+export const DEFAULT_QUIET_HOURS: QuietHoursSettings = {
+  enabled: true,
+  bedtime: "22:00",
+  wakeTime: "07:00",
+};
+
+export interface WaterSettings {
+  dailyGoalMl: number;
+  incrementMl: number;
+  remindersEnabled: boolean;
+  goalSet: boolean;
+}
+
+export const DEFAULT_WATER_SETTINGS: WaterSettings = {
+  dailyGoalMl: 2000,
+  incrementMl: 250,
+  remindersEnabled: true,
+  goalSet: false,
+};

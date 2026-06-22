@@ -12,6 +12,7 @@ import {
   dbGetMedicationTemplates,
   dbGetMedications,
   dbGetSetting,
+  dbGetWaterIntake,
   dbInsertDayTemplate,
   dbInsertFood,
   dbInsertMeal,
@@ -19,6 +20,7 @@ import {
   dbInsertMedication,
   dbSetMedicationTemplates,
   dbSetSetting,
+  dbSetWaterIntake,
   dbUpsertAchievement,
   initDatabase,
 } from "@/db/database";
@@ -133,6 +135,14 @@ class SqliteDataStore implements DataStore {
     for (const medication of medications) {
       dbInsertMedication(medication);
     }
+  }
+
+  async getWaterIntake(date: string): Promise<number> {
+    return Promise.resolve(dbGetWaterIntake(date));
+  }
+
+  async setWaterIntake(date: string, intakeMl: number): Promise<void> {
+    dbSetWaterIntake(date, intakeMl);
   }
 }
 

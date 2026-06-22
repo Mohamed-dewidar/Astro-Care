@@ -13,9 +13,12 @@ import type {
   MealTemplate,
   Medication,
   MedicationTemplate,
+  QuietHoursSettings,
   ScheduledMeal,
   Timeline,
+  WaterSettings,
 } from "@/types";
+import { DEFAULT_QUIET_HOURS, DEFAULT_WATER_SETTINGS } from "@/types";
 import {
   AsyncStorageDataStore,
   dataStoreRegistry,
@@ -161,6 +164,17 @@ interface AppContextType {
   showStreakModal: boolean;
   clearStreakModal: () => void;
   timelines: Timeline[];
+
+  quietHours: QuietHoursSettings;
+  setQuietHours: (patch: Partial<QuietHoursSettings>) => void;
+
+  waterSettings: WaterSettings;
+  todayWaterMl: number;
+  waterProgress: number;
+  setWaterGoal: (goalMl: number) => void;
+  setWaterRemindersEnabled: (enabled: boolean) => void;
+  addWater: () => void;
+  removeWater: () => void;
 }
 
 // ── Data store ─────────────────────────────────────────────────────────────
@@ -190,6 +204,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [showStreakModal, setShowStreakModal] = useState<boolean>(false);
   const [timelines, setTimelines] = useState<Timeline[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [quietHours, setQuietHoursState] =
+    useState<QuietHoursSettings>(DEFAULT_QUIET_HOURS);
+  const [waterSettings, setWaterSettingsState] = useState<WaterSettings>(
+    DEFAULT_WATER_SETTINGS,
+  );
+  const [todayWaterMl, setTodayWaterMl] = useState(0);
 
   // ── Bootstrap ───────────────────────────────────────────────────────────
 
@@ -238,6 +258,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if ((await dataStore.getSetting("onboarding")) === "true") {
           setOnboardingComplete(true);
         }
+
+        const quietRaw = await dataStore.getSetting("quiet_hours");
+        if (quietRaw) {
+          try {
+            setQuietHoursState({
+              ...DEFAULT_QUIET_HOURS,
+              ...JSON.parse(quietRaw),
+            });
+          } catch (_) {}
+        }
+
+        const waterRaw = await dataStore.getSetting("water_settings");
+        if (waterRaw) {
+          try {
+            setWaterSettingsState({
+              ...DEFAULT_WATER_SETTINGS,
+              ...JSON.parse(waterRaw),
+            });
+          } catch (_) {}
+        }
+
+        setTodayWaterMl(await dataStore.getWaterIntake(today));
       } catch (_) {
       } finally {
         setLoaded(true);
@@ -265,6 +307,57 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     medsTotal: todaysMedication.length,
     adherence,
   };
+
+  const waterProgress =
+    waterSettings.dailyGoalMl > 0
+      ? Math.min(100, (todayWaterMl / waterSettings.dailyGoalMl) * 100)
+      : 0;
+
+  const persistWaterSettings = useCallback((next: WaterSettings) => {
+    void dataStore.setSetting("water_settings", JSON.stringify(next));
+  }, []);
+
+  const setQuietHours = useCallback((patch: Partial<QuietHoursSettings>) => {
+    setQuietHoursState((prev) => {
+      const next = { ...prev, ...patch };
+      void dataStore.setSetting("quiet_hours", JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const setWaterGoal = useCallback(
+    (goalMl: number) => {
+      setWaterSettingsState((prev) => {
+        const next = { ...prev, dailyGoalMl: goalMl, goalSet: true };
+        persistWaterSettings(next);
+        return next;
+      });
+    },
+    [persistWaterSettings],
+  );
+
+  const setWaterRemindersEnabled = useCallback(
+    (enabled: boolean) => {
+      setWaterSettingsState((prev) => {
+        const next = { ...prev, remindersEnabled: enabled };
+        persistWaterSettings(next);
+        return next;
+      });
+    },
+    [persistWaterSettings],
+  );
+
+  const addWater = useCallback(() => {
+    const next = todayWaterMl + waterSettings.incrementMl;
+    setTodayWaterMl(next);
+    void dataStore.setWaterIntake(today, next);
+  }, [today, todayWaterMl, waterSettings.incrementMl]);
+
+  const removeWater = useCallback(() => {
+    const next = Math.max(0, todayWaterMl - waterSettings.incrementMl);
+    setTodayWaterMl(next);
+    void dataStore.setWaterIntake(today, next);
+  }, [today, todayWaterMl, waterSettings.incrementMl]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -854,6 +947,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         showStreakModal,
         clearStreakModal,
         timelines,
+        quietHours,
+        setQuietHours,
+        waterSettings,
+        todayWaterMl,
+        waterProgress,
+        setWaterGoal,
+        setWaterRemindersEnabled,
+        addWater,
+        removeWater,
       }}
     >
       {children}
