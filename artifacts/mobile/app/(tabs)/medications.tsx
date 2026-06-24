@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useRef, useState } from "react";
 import {
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -56,6 +57,16 @@ export default function MedicationsScreen() {
     string,
   ][];
 
+  const canSubmit = medName.trim().length > 0 && selectedCategory !== undefined;
+
+  const submitLabel = !medName.trim()
+    ? "Enter a medication name"
+    : !selectedCategory
+      ? "Select a meal category"
+      : editingMedication
+        ? "Save Template"
+        : "Add Template";
+
   const resetForm = () => {
     setMedName("");
     setMedDosage("");
@@ -87,7 +98,7 @@ export default function MedicationsScreen() {
   };
 
   const handleSave = () => {
-    if (!medName.trim() || !selectedCategory || !editingMedication) return;
+    if (!canSubmit || !editingMedication) return;
 
     updateMedicationTemplate(editingMedication.id, {
       name: medName.trim(),
@@ -101,7 +112,7 @@ export default function MedicationsScreen() {
   };
 
   const handleAdd = () => {
-    if (!medName.trim() || !selectedCategory) return;
+    if (!canSubmit) return;
     addMedicationTemplate({
       name: medName.trim(),
       dosage: medDosage.trim() || undefined,
@@ -217,119 +228,139 @@ export default function MedicationsScreen() {
         transparent
         animationType="slide"
         onRequestClose={closeModal}
+        statusBarTranslucent
       >
-        <Pressable style={styles.overlay} onPress={closeModal}>
-          <Pressable>
+        <View style={styles.overlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
+          <View style={styles.modalWrapper}>
             <GlassCard
               style={[styles.modal, { paddingBottom: insets.bottom + 16 }]}
             >
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {editingMedication
-                    ? "Edit Medication Template"
-                    : "New Medication Template"}
-                </Text>
-                <Pressable
-                  onPress={closeModal}
-                  style={styles.closeBtn}
-                  hitSlop={8}
-                >
-                  <Ionicons name="close" size={20} color="#94A3B8" />
-                </Pressable>
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Medication name *"
-                placeholderTextColor="#475569"
-                value={medName}
-                onChangeText={setMedName}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Dosage (e.g. 500mg)"
-                placeholderTextColor="#475569"
-                value={medDosage}
-                onChangeText={setMedDosage}
-              />
-
-              <Text style={styles.inputLabel}>Timing</Text>
-              <View style={styles.relationRow}>
-                {(["before", "after"] as const).map((rel) => (
-                  <Pressable
-                    key={rel}
-                    style={[
-                      styles.relationBtn,
-                      medRelation === rel && styles.relationBtnActive,
-                    ]}
-                    onPress={() => setMedRelation(rel)}
-                  >
-                    <Text
-                      style={[
-                        styles.relationBtnText,
-                        medRelation === rel && styles.relationBtnTextActive,
-                      ]}
-                    >
-                      {rel === "before" ? "Before Meal" : "After Meal"}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              <TextInput
-                style={styles.input}
-                placeholder="Minutes offset (e.g. 30)"
-                placeholderTextColor="#475569"
-                value={medOffset}
-                onChangeText={setMedOffset}
-                keyboardType="numeric"
-              />
-
-              <Text style={styles.inputLabel}>Link to Meal Category *</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.mealScroll}
+              <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
               >
-                {CATEGORY_OPTIONS.map(([category, label]) => (
-                  <Pressable
-                    key={category}
-                    onPress={() => setSelectedCategory(category)}
-                    style={[
-                      styles.mealChip,
-                      selectedCategory === category && styles.mealChipActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.mealChipText,
-                        selectedCategory === category &&
-                          styles.mealChipTextActive,
-                      ]}
-                    >
-                      {label}
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>
+                      {editingMedication
+                        ? "Edit Medication Template"
+                        : "New Medication Template"}
                     </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
+                    <Pressable
+                      onPress={closeModal}
+                      style={styles.closeBtn}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="close" size={20} color="#94A3B8" />
+                    </Pressable>
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Medication name *"
+                    placeholderTextColor="#475569"
+                    value={medName}
+                    onChangeText={setMedName}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Dosage (e.g. 500mg)"
+                    placeholderTextColor="#475569"
+                    value={medDosage}
+                    onChangeText={setMedDosage}
+                  />
 
-              <Pressable
-                style={styles.btn}
-                onPress={editingMedication ? handleSave : handleAdd}
-              >
-                <LinearGradient
-                  colors={["#22D3EE", "#3B82F6"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.btnGradient}
-                >
-                  <Text style={styles.btnText}>
-                    {editingMedication ? "Save Template" : "Add Template"}
-                  </Text>
-                </LinearGradient>
-              </Pressable>
+                  <Text style={styles.inputLabel}>Timing</Text>
+                  <View style={styles.relationRow}>
+                    {(["before", "after"] as const).map((rel) => (
+                      <Pressable
+                        key={rel}
+                        style={[
+                          styles.relationBtn,
+                          medRelation === rel && styles.relationBtnActive,
+                        ]}
+                        onPress={() => setMedRelation(rel)}
+                      >
+                        <Text
+                          style={[
+                            styles.relationBtnText,
+                            medRelation === rel && styles.relationBtnTextActive,
+                          ]}
+                        >
+                          {rel === "before" ? "Before Meal" : "After Meal"}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Minutes offset (e.g. 30)"
+                    placeholderTextColor="#475569"
+                    value={medOffset}
+                    onChangeText={setMedOffset}
+                    keyboardType="numeric"
+                  />
+
+                  <Text style={styles.inputLabel}>Link to Meal Category *</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.mealScroll}
+                  >
+                    {CATEGORY_OPTIONS.map(([category, label]) => (
+                      <Pressable
+                        key={category}
+                        onPress={() => setSelectedCategory(category)}
+                        style={[
+                          styles.mealChip,
+                          selectedCategory === category &&
+                            styles.mealChipActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.mealChipText,
+                            selectedCategory === category &&
+                              styles.mealChipTextActive,
+                          ]}
+                        >
+                          {label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+
+                  <Pressable
+                    style={[styles.btn, !canSubmit && styles.btnDisabled]}
+                    onPress={editingMedication ? handleSave : handleAdd}
+                    disabled={!canSubmit}
+                  >
+                    <LinearGradient
+                      colors={
+                        canSubmit
+                          ? ["#22D3EE", "#3B82F6"]
+                          : ["#1E293B", "#1E293B"]
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.btnGradient}
+                    >
+                      <Text
+                        style={[
+                          styles.btnText,
+                          !canSubmit && styles.btnTextDisabled,
+                        ]}
+                      >
+                        {submitLabel}
+                      </Text>
+                    </LinearGradient>
+                  </Pressable>
+                </ScrollView>
+              </KeyboardAvoidingView>
             </GlassCard>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -382,7 +413,13 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     backgroundColor: "rgba(0,0,0,0.6)",
   },
-  modal: { margin: 16, padding: 24, borderRadius: 24 },
+  modalWrapper: { flex: 1, justifyContent: "flex-end" },
+  modal: {
+    margin: 16,
+    padding: 24,
+    borderRadius: 24,
+    maxHeight: "90%",
+  },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -448,6 +485,8 @@ const styles = StyleSheet.create({
   mealChipText: { color: "#64748B", fontSize: 13 },
   mealChipTextActive: { color: "#22D3EE", fontWeight: "600" },
   btn: { borderRadius: 14, overflow: "hidden", marginTop: 8 },
+  btnDisabled: { opacity: 0.7 },
   btnGradient: { paddingVertical: 16, alignItems: "center" },
   btnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  btnTextDisabled: { color: "#475569" },
 });

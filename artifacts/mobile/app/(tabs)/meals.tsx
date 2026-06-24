@@ -732,7 +732,7 @@ export default function MealsScreen() {
             >
               <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
-                keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
+                keyboardVerticalOffset={20}
               >
                 <ScrollView showsVerticalScrollIndicator={false}>
                   <View style={mealsStyles.modalHeader}>
@@ -966,18 +966,18 @@ export default function MealsScreen() {
         animationType="slide"
         onRequestClose={closeSchedule}
       >
-        <KeyboardAvoidingView
-          style={mealsStyles.modalOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
-        >
-          <Pressable style={mealsStyles.modalOverlay} onPress={closeSchedule}>
-            <Pressable>
-              <GlassCard
-                style={[
-                  mealsStyles.modalCard,
-                  { paddingBottom: insets.bottom + 16 },
-                ]}
+        <View style={mealsStyles.modalOverlay}>
+          <Pressable style={mealsStyles.modalOverlay} onPress={closeSchedule} />
+          <View>
+            <GlassCard
+              style={[
+                mealsStyles.modalCard,
+                { paddingBottom: insets.bottom + 16 },
+              ]}
+            >
+              <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
               >
                 <View style={mealsStyles.modalHeader}>
                   <View>
@@ -1049,10 +1049,10 @@ export default function MealsScreen() {
                     </Text>
                   </LinearGradient>
                 </Pressable>
-              </GlassCard>
-            </Pressable>
-          </Pressable>
-        </KeyboardAvoidingView>
+              </KeyboardAvoidingView>
+            </GlassCard>
+          </View>
+        </View>
       </Modal>
 
       {/* ════ Edit Meal Time Modal ════ */}
