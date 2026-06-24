@@ -37,7 +37,7 @@
         {
           "icon": "./assets/images/icon.png",
           "color": "#7C3AED",
-          "sounds": ["./assets/sounds/water-sound.wav"]
+          "sounds": ["./assets/sounds/water.wav"]
         }
       ],
       "expo-sqlite"

@@ -9,7 +9,7 @@ import {
 } from "@/utils/quietHours";
 
 const WATER_CHANNEL_ID = "water_reminders";
-const WATER_SOUND = "water-sound.wav";
+const WATER_SOUND = "water.wav";
 
 let waterChannelReady = false;
 
