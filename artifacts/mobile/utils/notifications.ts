@@ -2,7 +2,28 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
 import type { QuietHoursSettings } from "@/types";
-import { getAwakeHours } from "@/utils/quietHours";
+import {
+  getAwakeHours,
+  isInQuietHours,
+  subtractMinutes,
+} from "@/utils/quietHours";
+
+const WATER_CHANNEL_ID = "water_reminders";
+const WATER_SOUND = "water-sound.wav";
+
+let waterChannelReady = false;
+
+async function ensureWaterNotificationChannel(): Promise<void> {
+  if (Platform.OS !== "android" || waterChannelReady) return;
+
+  await Notifications.setNotificationChannelAsync(WATER_CHANNEL_ID, {
+    name: "Hydration reminders",
+    importance: Notifications.AndroidImportance.DEFAULT,
+    sound: WATER_SOUND,
+  });
+
+  waterChannelReady = true;
+}
 
 export type NotifPermStatus = "granted" | "denied" | "undetermined";
 
@@ -26,16 +47,24 @@ export async function getScheduledNotificationCount(): Promise<number> {
   return all.length;
 }
 
-export async function scheduleMealNotification(meal: {
-  id: string;
-  name: string;
-  scheduledTime: string;
-  reminderEnabled: boolean;
-}): Promise<void> {
+export async function scheduleMealNotification(
+  meal: {
+    id: string;
+    name: string;
+    scheduledTime: string;
+    reminderEnabled: boolean;
+  },
+  quietHours: QuietHoursSettings,
+): Promise<void> {
   if (Platform.OS === "web" || !meal.reminderEnabled) return;
   try {
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== "granted") return;
+
+    if (isInQuietHours(meal.scheduledTime, quietHours)) {
+      await cancelMealNotification(meal.id);
+      return;
+    }
 
     const [h, m] = meal.scheduledTime.split(":").map(Number);
     const now = new Date();
@@ -65,8 +94,12 @@ export async function scheduleMealNotification(meal: {
     });
 
     // 15-min early warning
+    const earlyTime = subtractMinutes(meal.scheduledTime, 15);
     const earlyTrigger = new Date(trigger.getTime() - 15 * 60 * 1000);
-    if (earlyTrigger.getTime() > Date.now()) {
+    if (
+      earlyTrigger.getTime() > Date.now() &&
+      !isInQuietHours(earlyTime, quietHours)
+    ) {
       await Notifications.scheduleNotificationAsync({
         identifier: `meal-early-${meal.id}`,
         content: {
@@ -80,6 +113,10 @@ export async function scheduleMealNotification(meal: {
           date: earlyTrigger.getTime(),
         },
       });
+    } else {
+      await Notifications.cancelScheduledNotificationAsync(
+        `meal-early-${meal.id}`,
+      );
     }
   } catch (_) {}
 }
@@ -94,16 +131,24 @@ export async function cancelMealNotification(mealId: string): Promise<void> {
   } catch (_) {}
 }
 
-export async function scheduleMedicationNotification(med: {
-  id: string;
-  name: string;
-  dosage?: string;
-  computedTime?: string;
-}): Promise<void> {
+export async function scheduleMedicationNotification(
+  med: {
+    id: string;
+    name: string;
+    dosage?: string;
+    computedTime?: string;
+  },
+  quietHours: QuietHoursSettings,
+): Promise<void> {
   if (Platform.OS === "web" || !med.computedTime) return;
   try {
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== "granted") return;
+
+    if (isInQuietHours(med.computedTime, quietHours)) {
+      await cancelMedicationNotification(med.id);
+      return;
+    }
 
     const [h, m] = med.computedTime.split(":").map(Number);
     const now = new Date();
@@ -167,6 +212,7 @@ export async function scheduleWaterReminders(
     if (status !== "granted") return;
 
     await cancelWaterReminders();
+    await ensureWaterNotificationChannel();
 
     const awakeHours = quietHours.enabled
       ? getAwakeHours(quietHours.bedtime, quietHours.wakeTime)
@@ -175,16 +221,18 @@ export async function scheduleWaterReminders(
     for (const hour of awakeHours) {
       await Notifications.scheduleNotificationAsync({
         identifier: `water-hour-${hour}`,
+
         content: {
           title: "Hydration Check",
           body: "Time to drink some water",
-          sound: true,
+          sound: WATER_SOUND,
           data: { type: "water" },
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
           hour,
           minute: 0,
+          channelId: WATER_CHANNEL_ID,
         },
       });
     }

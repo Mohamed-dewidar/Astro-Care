@@ -16,22 +16,22 @@ export function NotificationScheduler() {
   useEffect(() => {
     todayMeals.forEach((meal) => {
       if (!meal.completedAt && !meal.skipped && meal.reminderEnabled) {
-        scheduleMealNotification(meal);
+        scheduleMealNotification(meal, quietHours);
       } else {
         cancelMealNotification(meal.id);
       }
     });
-  }, [todayMeals]);
+  }, [todayMeals, quietHours]);
 
   useEffect(() => {
     todaysMedication.forEach((med) => {
       if (!med.completedAt && !med.skipped && med.computedTime) {
-        scheduleMedicationNotification(med);
+        scheduleMedicationNotification(med, quietHours);
       } else {
         cancelMedicationNotification(med.id);
       }
     });
-  }, [todaysMedication]);
+  }, [todaysMedication, quietHours]);
 
   useEffect(() => {
     if (waterSettings.remindersEnabled) {

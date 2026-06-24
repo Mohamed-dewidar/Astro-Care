@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GlassCard } from "@/components/GlassCard";
 import { ProgressRing } from "@/components/ProgressRing";
 import { SpaceBackground } from "@/components/SpaceBackground";
+import { TimePicker } from "@/components/TimePicker";
 import { useApp } from "@/context/AppContext";
 import {
   getNotificationPermissionStatus,
@@ -56,6 +57,8 @@ export default function SettingsScreen() {
     todayWaterMl,
     setWaterGoal,
     setWaterRemindersEnabled,
+    quietHours,
+    setQuietHours,
   } = useApp();
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
   const topPad = Platform.OS === "web" ? 80 : insets.top;
@@ -296,6 +299,12 @@ export default function SettingsScreen() {
             {notifStatus === "granted" && (
               <View style={styles.notifTypes}>
                 <View style={styles.notifTypeRow}>
+                  <Ionicons name="moon" size={14} color="#A78BFA" />
+                  <Text style={styles.notifTypeText}>
+                    Quiet hours pause meal, medication, and hydration alerts
+                  </Text>
+                </View>
+                <View style={styles.notifTypeRow}>
                   <Ionicons name="planet" size={14} color="#3B82F6" />
                   <Text style={styles.notifTypeText}>
                     Meal reminders — 15 min early + at launch time
@@ -326,6 +335,45 @@ export default function SettingsScreen() {
                 </View>
               </View>
             )}
+          </GlassCard>
+
+          <GlassCard style={styles.quietHoursCard} glowColor="#A78BFA">
+            <View style={styles.quietHoursHeader}>
+              <View style={styles.quietHoursTitleRow}>
+                <Ionicons name="moon" size={18} color="#A78BFA" />
+                <Text style={styles.quietHoursTitle}>Quiet Hours</Text>
+              </View>
+              <Switch
+                value={quietHours.enabled}
+                onValueChange={(enabled) => setQuietHours({ enabled })}
+                trackColor={{ false: "#334155", true: "#A78BFA88" }}
+                thumbColor={quietHours.enabled ? "#A78BFA" : "#94A3B8"}
+              />
+            </View>
+
+            <Text style={styles.quietHoursHelper}>
+              Meal, medication, and hydration alerts are paused during quiet
+              hours.
+            </Text>
+
+            <View
+              style={[
+                styles.quietHoursPickers,
+                !quietHours.enabled && styles.quietHoursPickersDisabled,
+              ]}
+              pointerEvents={quietHours.enabled ? "auto" : "none"}
+            >
+              <TimePicker
+                label="Bedtime"
+                value={quietHours.bedtime}
+                onChange={(bedtime) => setQuietHours({ bedtime })}
+              />
+              <TimePicker
+                label="Wake time"
+                value={quietHours.wakeTime}
+                onChange={(wakeTime) => setQuietHours({ wakeTime })}
+              />
+            </View>
           </GlassCard>
         </View>
 
@@ -574,6 +622,23 @@ const styles = StyleSheet.create({
   },
   notifTypeRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   notifTypeText: { color: "#64748B", fontSize: 12, flex: 1, lineHeight: 16 },
+  quietHoursCard: { padding: 18, marginTop: 12 },
+  quietHoursHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  quietHoursTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  quietHoursTitle: { color: "#F8FAFC", fontSize: 15, fontWeight: "600" },
+  quietHoursHelper: {
+    color: "#64748B",
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 4,
+  },
+  quietHoursPickers: { marginTop: 4 },
+  quietHoursPickersDisabled: { opacity: 0.4 },
   hydrationCard: { padding: 18, gap: 0 },
   hydrationRow: {
     flexDirection: "row",
