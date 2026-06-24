@@ -18,7 +18,8 @@
     },
     "android": {
       "backgroundColor": "#030712",
-      "package": "com.kite_dewidar.mobile"
+      "package": "com.kite_dewidar.mobile",
+      "permissions": ["android.permission.SCHEDULE_EXACT_ALARM"]
     },
     "web": {
       "favicon": "./assets/images/icon.png"

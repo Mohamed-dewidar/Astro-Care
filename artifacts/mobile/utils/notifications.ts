@@ -18,7 +18,7 @@ async function ensureWaterNotificationChannel(): Promise<void> {
 
   await Notifications.setNotificationChannelAsync(WATER_CHANNEL_ID, {
     name: "Hydration reminders",
-    importance: Notifications.AndroidImportance.DEFAULT,
+    importance: Notifications.AndroidImportance.HIGH,
     sound: WATER_SOUND,
   });
 
@@ -227,6 +227,7 @@ export async function scheduleWaterReminders(
           body: "Time to drink some water",
           sound: WATER_SOUND,
           data: { type: "water" },
+          priority: Notifications.AndroidNotificationPriority.HIGH,
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
