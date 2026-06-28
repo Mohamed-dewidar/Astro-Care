@@ -117,7 +117,7 @@ interface AppContextType {
   toggleFavoriteFood: (id: string) => void;
 
   todayMeals: ScheduledMeal[];
-  allMeals: ScheduledMeal[];
+  scheduledMeals: ScheduledMeal[];
   addMeal: (meal: Omit<ScheduledMeal, "id">) => void;
   updateMeal: (id: string, meal: Partial<ScheduledMeal>) => void;
   deleteMeal: (id: string) => void;
@@ -126,7 +126,7 @@ interface AppContextType {
   undoMeal: (id: string) => void;
   updateMealTime: (id: string, scheduledTime: string) => void;
 
-  medications: ScheduledMedication[];
+  scheduledMedications: ScheduledMedication[];
   todaysMedication: ScheduledMedication[];
   medicationTemplates: MedicationTemplate[];
   addMedicationTemplate: (med: Omit<MedicationTemplate, "id">) => void;
@@ -190,8 +190,10 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [foods, setFoods] = useState<Food[]>([]);
-  const [allMeals, setAllMeals] = useState<ScheduledMeal[]>([]);
-  const [medications, setMedications] = useState<ScheduledMedication[]>([]);
+  const [scheduledMeals, setScheduledMeals] = useState<ScheduledMeal[]>([]);
+  const [scheduledMedications, setScheduledMedications] = useState<
+    ScheduledMedication[]
+  >([]);
   const [medicationTemplates, setMedicationTemplates] = useState<
     MedicationTemplate[]
   >([]);
@@ -222,7 +224,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setFoods(await dataStore.getFoods());
 
         const loadedMeals = await dataStore.getMeals();
-        setAllMeals(loadedMeals);
+        setScheduledMeals(loadedMeals);
 
         const loadedMedTemplates = await dataStore.getMedicationTemplates();
         setMedicationTemplates(loadedMedTemplates);
@@ -241,7 +243,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           await dataStore.upsertMedications(generated);
           loadedMeds = [...loadedMeds, ...generated];
         }
-        setMedications(loadedMeds);
+        setScheduledMedications(loadedMeds);
 
         setMealTemplates(await dataStore.getMealTemplates());
         setDayTemplates(await dataStore.getDayTemplates());
@@ -289,8 +291,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const today = getTodayString();
-  const todayMeals = allMeals.filter((m) => m.date === today);
-  const todaysMedication = medications.filter((m) => m.date === today);
+  const todayMeals = scheduledMeals.filter((m) => m.date === today);
+  const todaysMedication = scheduledMedications.filter((m) => m.date === today);
 
   const mealsCompleted = todayMeals.filter((m) => m.completedAt).length;
   const medsCompleted = todaysMedication.filter((m) => m.completedAt).length;
@@ -362,8 +364,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loaded) return;
     const today = getTodayString();
-    const todaysMeals = allMeals.filter((m) => m.date === today);
-    const todaysMeds = medications.filter((m) => m.date === today);
+    const todaysMeals = scheduledMeals.filter((m) => m.date === today);
+    const todaysMeds = scheduledMedications.filter((m) => m.date === today);
     const updatedTimelines: Timeline[] = [];
 
     todaysMeals.forEach((meal) => {
@@ -391,7 +393,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     setTimelines(updatedTimelines);
-  }, [loaded, allMeals, medications]);
+  }, [loaded, scheduledMeals, scheduledMedications]);
 
   // ── Onboarding ───────────────────────────────────────────────────────────
   const completeOnboarding = useCallback(() => {
@@ -411,8 +413,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const today = getTodayString();
       try {
         // Calculate today's adherence locally (from state values)
-        const todaysMeals = allMeals.filter((m) => m.date === today);
-        const todaysMeds = medications.filter((m) => m.date === today);
+        const todaysMeals = scheduledMeals.filter((m) => m.date === today);
+        const todaysMeds = scheduledMedications.filter((m) => m.date === today);
         const mealsCompleted = todaysMeals.filter((m) => m.completedAt).length;
         const medsCompleted = todaysMeds.filter((m) => m.completedAt).length;
         const totalEvents = todaysMeals.length + todaysMeds.length;
@@ -455,7 +457,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // ignore
       }
     })();
-  }, [loaded, allMeals, medications]);
+  }, [loaded, scheduledMeals, scheduledMedications]);
 
   // ── Foods ─────────────────────────────────────────────────────────────────
   const addFood = useCallback((food: Omit<Food, "id">) => {
@@ -533,8 +535,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (meal: Omit<ScheduledMeal, "id">) => {
       const newMeal: ScheduledMeal = { ...meal, id: uid() };
       void dataStore.upsertMeal(newMeal);
-      setAllMeals((prev) => [...prev, newMeal]);
-      setMedications((prev) =>
+      setScheduledMeals((prev) => [...prev, newMeal]);
+      setScheduledMedications((prev) =>
         applyMedicationSync(prev, newMeal, newMeal.scheduledTime),
       );
     },
@@ -543,12 +545,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateMeal = useCallback(
     (id: string, patch: Partial<ScheduledMeal>) => {
-      const meal = allMeals.find((entry) => entry.id === id);
+      const meal = scheduledMeals.find((entry) => entry.id === id);
       if (!meal) return;
 
       const updated = { ...meal, ...patch };
       void dataStore.upsertMeal(updated);
-      setAllMeals((prev) =>
+      setScheduledMeals((prev) =>
         prev.map((entry) => (entry.id === id ? updated : entry)),
       );
 
@@ -561,23 +563,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               return `${String(completed.getHours()).padStart(2, "0")}:${String(completed.getMinutes()).padStart(2, "0")}`;
             })()
           : updated.scheduledTime;
-        setMedications((prev) =>
+        setScheduledMedications((prev) =>
           applyMedicationSync(prev, updated, anchorTime),
         );
       }
     },
-    [allMeals, applyMedicationSync],
+    [scheduledMeals, applyMedicationSync],
   );
 
   const deleteMeal = useCallback((id: string) => {
     void dataStore.deleteMeal(id);
-    setAllMeals((prev) => prev.filter((entry) => entry.id !== id));
+    setScheduledMeals((prev) => prev.filter((entry) => entry.id !== id));
   }, []);
 
   const completeMeal = useCallback(
     (id: string) => {
       const completedAt = new Date().toISOString();
-      const completedMeal = allMeals.find((meal) => meal.id === id);
+      const completedMeal = scheduledMeals.find((meal) => meal.id === id);
       if (!completedMeal) return;
 
       const updatedMeal = {
@@ -590,11 +592,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const now = new Date(completedAt);
       const actualTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-      setAllMeals((prev) =>
+      setScheduledMeals((prev) =>
         prev.map((meal) => (meal.id === id ? updatedMeal : meal)),
       );
 
-      setMedications((prev) =>
+      setScheduledMedications((prev) =>
         applyMedicationSync(prev, updatedMeal, actualTime),
       );
 
@@ -615,11 +617,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return updated;
       });
     },
-    [allMeals, applyMedicationSync],
+    [scheduledMeals, applyMedicationSync],
   );
 
   const skipMeal = useCallback((id: string) => {
-    setAllMeals((prev) => {
+    setScheduledMeals((prev) => {
       const meal = prev.find((entry) => entry.id === id);
       if (!meal) return prev;
       const updated = {
@@ -634,7 +636,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const undoMeal = useCallback(
     (id: string) => {
-      const meal = allMeals.find((entry) => entry.id === id);
+      const meal = scheduledMeals.find((entry) => entry.id === id);
       if (!meal) return;
 
       const wasCompleted = !!meal.completedAt;
@@ -644,34 +646,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         skipped: false,
       };
       void dataStore.upsertMeal(updated);
-      setAllMeals((prev) =>
+      setScheduledMeals((prev) =>
         prev.map((entry) => (entry.id === id ? updated : entry)),
       );
 
       if (wasCompleted) {
-        setMedications((prev) =>
+        setScheduledMedications((prev) =>
           applyMedicationSync(prev, updated, updated.scheduledTime),
         );
       }
     },
-    [allMeals, applyMedicationSync],
+    [scheduledMeals, applyMedicationSync],
   );
 
   const updateMealTime = useCallback(
     (id: string, scheduledTime: string) => {
-      const meal = allMeals.find((entry) => entry.id === id);
+      const meal = scheduledMeals.find((entry) => entry.id === id);
       if (!meal || meal.completedAt || meal.skipped) return;
 
       const updated = { ...meal, scheduledTime };
       void dataStore.upsertMeal(updated);
-      setAllMeals((prev) =>
+      setScheduledMeals((prev) =>
         prev.map((entry) => (entry.id === id ? updated : entry)),
       );
-      setMedications((prev) =>
+      setScheduledMedications((prev) =>
         applyMedicationSync(prev, updated, scheduledTime),
       );
     },
-    [allMeals, applyMedicationSync],
+    [scheduledMeals, applyMedicationSync],
   );
 
   // ── Medications ───────────────────────────────────────────────────────────
@@ -685,7 +687,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
 
       const today = getTodayString();
-      const linkedMeal = allMeals.find(
+      const linkedMeal = scheduledMeals.find(
         (meal) => meal.date === today && meal.category === med.linkToCategory,
       );
       const computedTime = linkedMeal
@@ -705,9 +707,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         date: today,
       };
       void dataStore.upsertMedication(todayMed);
-      setMedications((prev) => [...prev, todayMed]);
+      setScheduledMedications((prev) => [...prev, todayMed]);
     },
-    [allMeals],
+    [scheduledMeals],
   );
 
   const addMedication = useCallback(
@@ -725,11 +727,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return next;
       });
 
-      setMedications((prev) => {
+      setScheduledMedications((prev) => {
         const today = getTodayString();
         return prev.map((med) => {
           if (med.templateId !== id || med.date !== today) return med;
-          const linkedMeal = allMeals.find(
+          const linkedMeal = scheduledMeals.find(
             (meal) =>
               meal.date === today &&
               meal.category === (patch.linkToCategory ?? med.linkToCategory),
@@ -750,7 +752,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
       });
     },
-    [allMeals],
+    [scheduledMeals],
   );
 
   const deleteMedicationTemplate = useCallback((id: string) => {
@@ -759,7 +761,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       void dataStore.setMedicationTemplates(next);
       return next;
     });
-    setMedications((prev) => {
+    setScheduledMedications((prev) => {
       const toDelete = prev.filter((med) => med.templateId === id);
       toDelete.forEach((med) => void dataStore.deleteMedication(med.id));
       return prev.filter((med) => med.templateId !== id);
@@ -768,7 +770,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateMedication = useCallback(
     (id: string, patch: Partial<ScheduledMedication>) => {
-      setMedications((prev) => {
+      setScheduledMedications((prev) => {
         const med = prev.find((entry) => entry.id === id);
         if (!med) return prev;
         const updated = { ...med, ...patch };
@@ -781,11 +783,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteMedication = useCallback((id: string) => {
     void dataStore.deleteMedication(id);
-    setMedications((prev) => prev.filter((entry) => entry.id !== id));
+    setScheduledMedications((prev) => prev.filter((entry) => entry.id !== id));
   }, []);
 
   const completeMedication = useCallback((id: string) => {
-    setMedications((prev) => {
+    setScheduledMedications((prev) => {
       const med = prev.find((entry) => entry.id === id);
       if (!med) return prev;
       const updated = {
@@ -799,7 +801,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const skipMedication = useCallback((id: string) => {
-    setMedications((prev) => {
+    setScheduledMedications((prev) => {
       const med = prev.find((entry) => entry.id === id);
       if (!med) return prev;
       const updated = {
@@ -881,25 +883,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         };
       });
 
-      allMeals
+      scheduledMeals
         .filter((meal) => meal.date === date)
         .forEach((meal) => void dataStore.deleteMeal(meal.id));
-      medications
+      scheduledMedications
         .filter((med) => med.date === date)
         .forEach((med) => void dataStore.deleteMedication(med.id));
       void dataStore.upsertMeals(newMeals);
       void dataStore.upsertMedications(newMeds);
 
-      setAllMeals((prev) => [
+      setScheduledMeals((prev) => [
         ...prev.filter((meal) => meal.date !== date),
         ...newMeals,
       ]);
-      setMedications((prev) => [
+      setScheduledMedications((prev) => [
         ...prev.filter((med) => med.date !== date),
         ...newMeds,
       ]);
     },
-    [allMeals, dayTemplates, medications],
+    [scheduledMeals, dayTemplates, scheduledMedications],
   );
 
   return (
@@ -913,7 +915,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteFood,
         toggleFavoriteFood,
         todayMeals,
-        allMeals,
+        scheduledMeals,
         addMeal,
         updateMeal,
         deleteMeal,
@@ -921,7 +923,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         skipMeal,
         undoMeal,
         updateMealTime,
-        medications,
+        scheduledMedications,
         todaysMedication,
         medicationTemplates,
         addMedicationTemplate,

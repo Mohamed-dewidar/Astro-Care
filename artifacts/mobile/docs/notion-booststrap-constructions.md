@@ -528,19 +528,115 @@ const newMeds = MedicationFactory.fromDayTemplateMeds(
 
 ## 11. Incremental migration path
 
-- [ ] **Step 3a** — Extract without changing behavior
-  - Move `buildTodayMedsFromTemplates` → `domain/factories/medicationFactory.ts`
-  - Move `INITIAL_ACHIEVEMENTS` → `domain/seed/seedAchievements.ts`
-  - Re-export and import in `AppContext` — behavior identical
-- [ ] **Step 3b** — Deduplicate `applyDayTemplate`
-  - Extract meal mapping → `MealFactory`
-  - Reuse `MedicationFactory` instead of inline med mapping
-  - Removes ~30 lines of duplication
-- [ ] **Step 3c** — Inject ID generation (optional, good for tests)
-  - Pass `generateId` param; tests use `() => "fixed-id-1"`
-- [ ] **Step 3d** — Bootstrap Facade (Phase 4 preview)
-  - `bootstrapApp(dataStore)` calls factories + repos
-  - Bootstrap `useEffect` becomes ~5 lines
+> **Scope:** Phase 1 only (Simple Factory). Do not start domain services, use cases, or context splitting until these steps are done.
+>
+> **Architecture reference:** [`file-architecture.md`](./file-architecture.md)
+
+### Before you start
+
+- [ ] Read `AppContext.tsx` lines **35–105** (seed + `buildTodayMedsFromTemplates`) and **852–903** (`applyDayTemplate`) — these are the only factory targets for now
+- [ ] Confirm: factories **build** objects; `DataStore` **loads/saves** them — do not move CRUD or `setState` into factories
+- [ ] Skip factories for `{ ...x, id: uid() }` one-liners (`addFood`, `addMealTemplate`, etc.)
+
+---
+
+### Step 1 — Seed data (smallest win)
+
+**Goal:** move static data out of `AppContext`; no behavior change.
+
+- [ ] Create `domain/seed/seedAchievements.ts`
+- [ ] Move `INITIAL_ACHIEVEMENTS` from `AppContext.tsx` into that file
+- [ ] Import it back in `AppContext` where achievements are seeded (bootstrap block ~249–255)
+- [ ] Run the app — achievements still seed on first launch
+
+**Stop here if anything breaks. Do not continue until this works.**
+
+---
+
+### Step 2 — Medication factory (bootstrap path)
+
+**Goal:** extract med materialization used on app start.
+
+- [ ] Create `domain/factories/medicationFactory.ts`
+- [ ] Move `buildTodayMedsFromTemplates` → export as `fromTemplates(meals, templates, date)`
+- [ ] Keep logic pure: no `dataStore`, no React — only inputs → `ScheduledMedication[]`
+- [ ] Replace the call in bootstrap `useEffect` (~236) with `MedicationFactory.fromTemplates(...)`
+- [ ] Delete the old function from `AppContext`
+- [ ] Run the app — on a fresh day (or cleared today’s meds), today’s meds should still generate from templates
+
+**Verify:** med `computedTime` still links to the correct meal category.
+
+---
+
+### Step 3 — Meal factory (`applyDayTemplate` meals)
+
+**Goal:** extract meal materialization from day templates.
+
+- [ ] Create `domain/factories/mealFactory.ts`
+- [ ] Add `createDailyMeals(mealSpecs, date)` — template meal specs → `ScheduledMeal[]` with new id, date, reset completion flags
+- [ ] In `applyDayTemplate` (~856–862), replace inline `.map(...)` with `MealFactory.createDailyMeals(...)`
+- [ ] Run the app — apply a day template on calendar; meals for that date should match before
+
+**Leave in `applyDayTemplate`:** delete old day’s meals, `upsertMeals`, `setAllMeals` — that is orchestration, not factory.
+
+---
+
+### Step 4 — Deduplicate meds in `applyDayTemplate`
+
+**Goal:** one med-building rule for bootstrap and apply-day-template.
+
+- [ ] Add `fromDayTemplateMeds(meals, dayTemplateMeds, date)` to `medicationFactory.ts` (same linking rule as `fromTemplates`, different input shape)
+- [ ] Extract shared “link med to meal → compute time → assign id/date/defaults” into a private helper inside the factory file
+- [ ] In `applyDayTemplate` (~863–881), replace inline med `.map(...)` with `MedicationFactory.fromDayTemplateMeds(...)`
+- [ ] Run the app — apply day template; meds should still get correct `computedTime`
+
+---
+
+### Step 5 — Third duplicate: `addMedicationTemplate`
+
+**Goal:** stop copying med materialization a third time.
+
+- [ ] Find med instance build in `addMedicationTemplate` (~698–706)
+- [ ] Reuse `medicationFactory` (e.g. `fromTemplate` for a single template + today’s meals)
+- [ ] Run the app — add a new med template in settings; today’s scheduled med should still appear
+
+---
+
+### Step 6 — Optional: testable ID generation
+
+**Goal:** make factories unit-testable without changing app behavior.
+
+- [ ] Add optional `generateId` parameter to factory functions (default: `uid` from `dateUtils`)
+- [ ] Add one unit test for `fromTemplates` — breakfast at 08:00 + “after +30min” → `computedTime` is `08:30`
+
+**Skip if you are not writing tests yet.**
+
+---
+
+### Step 7 — Stop (do not go further yet)
+
+Phase 1 is complete when all factory build paths use `domain/factories/` and `AppContext` no longer contains inline med/meal materialization.
+
+**Do not start until Phase 1 is stable:**
+
+| Later phase | What                                                  | Folder                  |
+| ----------- | ----------------------------------------------------- | ----------------------- |
+| Phase 3     | `todayStats`, streak, timelines                       | `domain/services/`      |
+| Phase 4     | `bootstrapApp`, `applyDayTemplate` orchestration      | `application/useCases/` |
+| Phase 5     | Split `useApp()` into `useMeals`, `useMedications`, … | `context/hooks/`        |
+
+**Do not introduce Factory Method or Strategy** until you have a second real way to build a day (e.g. onboarding wizard vs day template).
+
+---
+
+### Quick checklist — am I done with Phase 1?
+
+- [ ] `INITIAL_ACHIEVEMENTS` lives in `domain/seed/`
+- [ ] No `buildTodayMedsFromTemplates` in `AppContext`
+- [ ] `applyDayTemplate` uses `MealFactory` + `MedicationFactory` (no inline `.map` build logic)
+- [ ] `addMedicationTemplate` uses `medicationFactory` (no inline build block)
+- [ ] Factory files have zero imports from `context/`, React, or `dataStore`
+- [ ] App still boots, applies day templates, and adds med templates correctly
 
 ---
 

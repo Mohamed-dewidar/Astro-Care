@@ -77,7 +77,6 @@ export default function MealsScreen() {
   const {
     todayMeals,
     foods,
-    allMeals,
     mealTemplates,
     completeMeal,
     skipMeal,
