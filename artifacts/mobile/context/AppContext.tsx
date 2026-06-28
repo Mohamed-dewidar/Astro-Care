@@ -29,80 +29,13 @@ import {
   getChangedMedications,
   syncMedicationsToMealTime,
 } from "@/utils/mealMedicationSync";
-
-// ─── Initial achievements ──────────────────────────────────────────────────
-
-const INITIAL_ACHIEVEMENTS: Achievement[] = [
-  {
-    id: "first-mission",
-    title: "First Mission",
-    description: "Complete your first meal",
-    icon: "rocket",
-    unlocked: false,
-  },
-  {
-    id: "7-day-streak",
-    title: "7-Day Orbit Streak",
-    description: "Complete all meals for 7 consecutive days",
-    icon: "repeat",
-    unlocked: false,
-  },
-  {
-    id: "perfect-day",
-    title: "Perfect Mission Day",
-    description: "Complete all meals and medications in a day",
-    icon: "star",
-    unlocked: false,
-  },
-  {
-    id: "nutrition-commander",
-    title: "Nutrition Commander",
-    description: "Log 50 meals total",
-    icon: "trophy",
-    unlocked: false,
-  },
-  {
-    id: "medication-master",
-    title: "Medication Master",
-    description: "Complete 30 medications on time",
-    icon: "medkit",
-    unlocked: false,
-  },
-  {
-    id: "galaxy-explorer",
-    title: "Galaxy Explorer",
-    description: "Create 5 day templates",
-    icon: "planet",
-    unlocked: false,
-  },
-];
-
-function buildTodayMedsFromTemplates(
-  meals: ScheduledMeal[],
-  templates: MedicationTemplate[],
-  date: string,
-): ScheduledMedication[] {
-  return templates.map((template) => {
-    const linkedMeal = meals.find(
-      (meal) => meal.category === template.linkToCategory,
-    );
-    return {
-      ...template,
-      id: uid(),
-      templateId: template.id,
-      computedTime: linkedMeal
-        ? computeMedicationTime(
-            linkedMeal.scheduledTime,
-            template.relationType,
-            template.minutesOffset,
-          )
-        : undefined,
-      completedAt: undefined,
-      skipped: false,
-      date,
-    };
-  });
-}
+import { createDailyMeals } from "@/domain/factories/mealFactory";
+import {
+  createDailyMedicationFromTemplate,
+  createDailyMedications,
+  createDailyMedicationsFromDayTemplate,
+} from "@/domain/factories/medicationFactory";
+import { INITIAL_ACHIEVEMENTS } from "@/domain/seed/seedAchievements";
 
 // ─── Context type ──────────────────────────────────────────────────────────
 
@@ -235,7 +168,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           loadedMedTemplates.length > 0
         ) {
           const todayMeals = loadedMeals.filter((meal) => meal.date === today);
-          const generated = buildTodayMedsFromTemplates(
+          const generated = createDailyMedications(
             todayMeals,
             loadedMedTemplates,
             today,
@@ -687,25 +620,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
 
       const today = getTodayString();
-      const linkedMeal = scheduledMeals.find(
-        (meal) => meal.date === today && meal.category === med.linkToCategory,
+      const todayMeals = scheduledMeals.filter((meal) => meal.date === today);
+      const todayMed = createDailyMedicationFromTemplate(
+        todayMeals,
+        newTemplate,
+        today,
       );
-      const computedTime = linkedMeal
-        ? computeMedicationTime(
-            linkedMeal.scheduledTime,
-            med.relationType,
-            med.minutesOffset,
-          )
-        : undefined;
-      const todayMed: ScheduledMedication = {
-        ...newTemplate,
-        templateId: newTemplate.id,
-        id: uid(),
-        computedTime,
-        completedAt: undefined,
-        skipped: false,
-        date: today,
-      };
       void dataStore.upsertMedication(todayMed);
       setScheduledMedications((prev) => [...prev, todayMed]);
     },
@@ -855,33 +775,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (templateId: string, date: string) => {
       const template = dayTemplates.find((entry) => entry.id === templateId);
       if (!template) return;
-      const newMeals: ScheduledMeal[] = template.meals.map((meal) => ({
-        ...meal,
-        id: uid(),
+      const newMeals = createDailyMeals(template.meals, date);
+      const newMeds = createDailyMedicationsFromDayTemplate(
+        newMeals,
+        template.medications,
         date,
-        completedAt: undefined,
-        skipped: false,
-      }));
-      const newMeds: ScheduledMedication[] = template.medications.map((med) => {
-        const linked = newMeals.find(
-          (meal) => meal.category === med.linkToCategory,
-        );
-        const computedTime = linked
-          ? computeMedicationTime(
-              linked.scheduledTime,
-              med.relationType,
-              med.minutesOffset,
-            )
-          : undefined;
-        return {
-          ...med,
-          id: uid(),
-          date,
-          completedAt: undefined,
-          skipped: false,
-          computedTime,
-        };
-      });
+      );
 
       scheduledMeals
         .filter((meal) => meal.date === date)
