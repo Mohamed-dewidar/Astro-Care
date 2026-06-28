@@ -3,7 +3,7 @@ import type {
   DayTemplate,
   Food,
   MealTemplate,
-  Medication,
+  ScheduledMedication,
   MedicationTemplate,
   ScheduledMeal,
 } from "@/types";
@@ -28,8 +28,8 @@ export interface DataStore {
   deleteMeal: (id: string) => Promise<void>;
 
   // Medications (scheduled instances)
-  getMedications: () => Promise<Medication[]>;
-  upsertMedication: (medication: Medication) => Promise<void>;
+  getMedications: () => Promise<ScheduledMedication[]>;
+  upsertMedication: (medication: ScheduledMedication) => Promise<void>;
   deleteMedication: (id: string) => Promise<void>;
 
   // Meal templates
@@ -52,7 +52,7 @@ export interface DataStore {
 
   // Bulk helpers (bootstrap seeding, applyDayTemplate)
   upsertMeals: (meals: ScheduledMeal[]) => Promise<void>;
-  upsertMedications: (medications: Medication[]) => Promise<void>;
+  upsertMedications: (medications: ScheduledMedication[]) => Promise<void>;
 
   // Water
   getWaterIntake: (date: string) => Promise<number>;

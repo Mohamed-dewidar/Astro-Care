@@ -11,7 +11,7 @@ import type {
   DayTemplate,
   Food,
   MealTemplate,
-  Medication,
+  ScheduledMedication,
   MedicationTemplate,
   QuietHoursSettings,
   ScheduledMeal,
@@ -81,7 +81,7 @@ function buildTodayMedsFromTemplates(
   meals: ScheduledMeal[],
   templates: MedicationTemplate[],
   date: string,
-): Medication[] {
+): ScheduledMedication[] {
   return templates.map((template) => {
     const linkedMeal = meals.find(
       (meal) => meal.category === template.linkToCategory,
@@ -126,8 +126,8 @@ interface AppContextType {
   undoMeal: (id: string) => void;
   updateMealTime: (id: string, scheduledTime: string) => void;
 
-  medications: Medication[];
-  todaysMedication: Medication[];
+  medications: ScheduledMedication[];
+  todaysMedication: ScheduledMedication[];
   medicationTemplates: MedicationTemplate[];
   addMedicationTemplate: (med: Omit<MedicationTemplate, "id">) => void;
   updateMedicationTemplate: (
@@ -136,7 +136,7 @@ interface AppContextType {
   ) => void;
   deleteMedicationTemplate: (id: string) => void;
   addMedication: (med: Omit<MedicationTemplate, "id">) => void;
-  updateMedication: (id: string, med: Partial<Medication>) => void;
+  updateMedication: (id: string, med: Partial<ScheduledMedication>) => void;
   deleteMedication: (id: string) => void;
   completeMedication: (id: string) => void;
   skipMedication: (id: string) => void;
@@ -191,7 +191,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [foods, setFoods] = useState<Food[]>([]);
   const [allMeals, setAllMeals] = useState<ScheduledMeal[]>([]);
-  const [medications, setMedications] = useState<Medication[]>([]);
+  const [medications, setMedications] = useState<ScheduledMedication[]>([]);
   const [medicationTemplates, setMedicationTemplates] = useState<
     MedicationTemplate[]
   >([]);
@@ -513,7 +513,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Meals ─────────────────────────────────────────────────────────────────
   const persistMedicationChanges = useCallback(
-    (prev: Medication[], next: Medication[]) => {
+    (prev: ScheduledMedication[], next: ScheduledMedication[]) => {
       const changed = getChangedMedications(prev, next);
       if (changed.length > 0) void dataStore.upsertMedications(changed);
     },
@@ -521,7 +521,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const applyMedicationSync = useCallback(
-    (prev: Medication[], meal: ScheduledMeal, anchorTime: string) => {
+    (prev: ScheduledMedication[], meal: ScheduledMeal, anchorTime: string) => {
       const next = syncMedicationsToMealTime(prev, meal, anchorTime);
       persistMedicationChanges(prev, next);
       return next;
@@ -695,7 +695,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             med.minutesOffset,
           )
         : undefined;
-      const todayMed: Medication = {
+      const todayMed: ScheduledMedication = {
         ...newTemplate,
         templateId: newTemplate.id,
         id: uid(),
@@ -767,7 +767,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateMedication = useCallback(
-    (id: string, patch: Partial<Medication>) => {
+    (id: string, patch: Partial<ScheduledMedication>) => {
       setMedications((prev) => {
         const med = prev.find((entry) => entry.id === id);
         if (!med) return prev;
@@ -860,7 +860,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         completedAt: undefined,
         skipped: false,
       }));
-      const newMeds: Medication[] = template.medications.map((med) => {
+      const newMeds: ScheduledMedication[] = template.medications.map((med) => {
         const linked = newMeals.find(
           (meal) => meal.category === med.linkToCategory,
         );

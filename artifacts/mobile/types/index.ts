@@ -101,23 +101,6 @@ export interface ScheduledMeal {
   date: string;
 }
 
-export interface Medication {
-  id: string;
-  templateId?: string;
-  name: string;
-  linkToCategory: MealCategory;
-  relationType: "before" | "after";
-  dosage?: string;
-  quantity?: string;
-  image?: string;
-  notes?: string;
-  minutesOffset: number;
-  computedTime?: string;
-  completedAt?: string;
-  skipped?: boolean;
-  date: string;
-}
-
 export interface Timeline {
   id: string;
   name: string;
@@ -140,6 +123,14 @@ export interface MedicationTemplate {
   minutesOffset: number;
 }
 
+export interface ScheduledMedication extends MedicationTemplate {
+  templateId?: string;
+  computedTime?: string;
+  completedAt?: string;
+  skipped?: boolean;
+  date: string;
+}
+
 export interface MealTemplate {
   id: string;
   name: string;
@@ -154,7 +145,7 @@ export interface DayTemplate {
   name: string;
   meals: Omit<ScheduledMeal, "id" | "date" | "completedAt" | "skipped">[];
   medications: Omit<
-    Medication,
+    ScheduledMedication,
     "id" | "date" | "completedAt" | "skipped" | "computedTime"
   >[];
 }
